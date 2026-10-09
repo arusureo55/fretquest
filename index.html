@@ -1,0 +1,1398 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FretQuest</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12141C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FretQuest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F7F7FA;--surface:#FFFFFF;--surface2:#ECEDF3;--text:#1A1C24;--sub:#5A5F73;--accent:#D98A00;--line:rgba(26,28,36,.13);
+  --perfect:#3DD9EB;--great:#4CD07D;--good:#F5D23B;--miss:#8A8FA3;
+  --s1:#E8697D;--s2:#F29E4C;--s3:#E6D15A;--s4:#6CC4A1;--s5:#5B9BE6;--s6:#A77BE0;
+  --fs:1;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#12141C;--surface:#1E2130;--surface2:#282C3E;--text:#F2F2F5;--sub:#A0A4B8;--accent:#FFB020;--line:rgba(242,242,245,.12);color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#12141C;--surface:#1E2130;--surface2:#282C3E;--text:#F2F2F5;--sub:#A0A4B8;--accent:#FFB020;--line:rgba(242,242,245,.12);color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;font-size:calc(16px * var(--fs));scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:"Noto Sans JP",system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif;font-size:1rem;line-height:1.65;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+button,select,input{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.sub{color:var(--sub)}
+.small{font-size:.875rem}
+h1{font-size:1.375rem;line-height:1.35;margin:0 0 4px;font-weight:900;letter-spacing:.01em}
+h2{font-size:1.125rem;line-height:1.4;margin:0 0 8px;font-weight:700}
+p{margin:0 0 12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#app{max-width:560px;margin:0 auto;min-height:100%}
+main{padding:12px 16px 104px}
+.top{display:flex;align-items:center;gap:8px;padding:8px 0 12px}
+.top .grow{flex:1;min-width:0}
+.logo{font-weight:900;font-size:1.25rem;letter-spacing:.02em;display:flex;flex-direction:column;gap:5px}
+.strings{display:flex;flex-direction:column;gap:2px;width:96px}
+.strings i{display:block;height:2px;border-radius:2px}
+.iconbtn{width:48px;height:48px;border-radius:14px;border:0;background:transparent;display:inline-grid;place-items:center;cursor:pointer;color:var(--text)}
+.iconbtn:hover{background:var(--surface2)}
+.iconbtn svg{width:24px;height:24px}
+.btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-size:1.0625rem;font-weight:700;padding:10px 20px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--text)}
+.btn.primary{background:var(--accent);border-color:transparent;color:#1A1C24}
+.btn.ghost{background:transparent}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:20px;height:20px}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--line)}
+.card.flat{border:0}
+.section{margin:24px 0 8px;font-weight:700;font-size:1.0625rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:48px;padding:8px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:500}
+.chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent);font-weight:700}
+.bar{height:10px;border-radius:6px;background:var(--surface2);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.star-on{color:var(--accent)}
+.star-off{color:var(--sub);opacity:.5}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:999px;background:var(--surface2);font-size:.8125rem;font-weight:500}
+.banner{border-radius:12px;padding:12px 16px;background:var(--surface2);display:flex;gap:12px;align-items:flex-start}
+.banner>svg{width:24px;height:24px;flex:none}
+.ob .banner>svg{width:40px;height:40px}
+.banner b{display:block}
+.empty{text-align:center;padding:40px 16px}
+.empty svg{width:48px;height:48px;color:var(--sub)}
+/* tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--surface);border-top:1px solid var(--line);z-index:20}
+nav.tabs .in{display:flex;max-width:560px;margin:0 auto}
+nav.tabs button{flex:1;min-height:60px;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.75rem;color:var(--sub);font-weight:500}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--text);font-weight:700}
+nav.tabs button[aria-current="page"] svg{color:var(--accent)}
+/* home */
+.hero{border-radius:12px;padding:16px;background:var(--surface);border:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.lvl{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--p)*1%), var(--surface2) 0);position:relative}
+.lvl::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--surface)}
+.lvl span{position:relative;z-index:1;text-align:center;line-height:1.1;font-weight:900;font-size:1.25rem}
+.lvl small{display:block;font-size:.6875rem;font-weight:500;color:var(--sub)}
+.quest{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.quest:first-of-type{border-top:0}
+.check{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center}
+.check.on{background:var(--great);border-color:var(--great);color:#12141C}
+.check svg{width:16px;height:16px}
+/* map */
+.worldtabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.worldtabs::-webkit-scrollbar{display:none}
+.worldtabs .chip{flex:none;white-space:nowrap}
+.wbanner{margin-top:12px;border-radius:12px;padding:20px 16px;color:#F2F2F5;position:relative;overflow:hidden}
+.wbanner h1{color:#fff}
+.wbanner p{margin:0;color:rgba(242,242,245,.85)}
+.wbanner .lines{position:absolute;right:-10px;top:14px;display:flex;flex-direction:column;gap:7px;width:45%;opacity:.55}
+.wbanner .lines i{display:block;height:2px;border-radius:2px}
+.path{position:relative;margin-top:16px}
+.path svg.route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:transparent;cursor:pointer;padding:0;width:96px}
+.node .disc{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--line);font-weight:900;font-size:1.125rem}
+.node.boss .disc{width:78px;height:78px;font-size:.9375rem;border-width:3px}
+.node.cur .disc{border-color:var(--accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}
+.node.done .disc{background:var(--surface2)}
+.node.locked .disc{opacity:.5}
+.node .disc svg{width:22px;height:22px}
+.node .stars{font-size:.875rem;letter-spacing:1px;line-height:1}
+.node .lbl{font-size:.75rem;color:var(--sub);text-align:center;line-height:1.25;max-width:96px}
+.node.review .disc{border-style:dashed}
+/* detail */
+.diagrams{display:flex;gap:12px;flex-wrap:wrap}
+.diagram{display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:700}
+label.chk{display:flex;gap:12px;align-items:center;min-height:48px;cursor:pointer}
+label.chk input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+.speed{display:flex;align-items:center;gap:12px}
+.speed input[type=range]{flex:1;accent-color:var(--accent);height:32px}
+/* result */
+.bigstars{font-size:3rem;line-height:1;letter-spacing:6px;text-align:center}
+.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.grade{border-radius:12px;padding:10px 4px;text-align:center;background:var(--surface2)}
+.grade b{display:block;font-size:1.25rem}
+.grade .sym{font-size:1.1rem}
+.hist{display:flex;align-items:flex-end;gap:2px;height:64px}
+.hist i{flex:1;background:var(--sub);opacity:.5;border-radius:2px 2px 0 0;min-height:2px}
+.hist i.mid{background:var(--great);opacity:1}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
+/* weak */
+.dots{display:inline-flex;gap:4px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--surface2);border:1px solid var(--line)}
+.dots i.on{background:var(--great);border-color:var(--great)}
+/* league */
+.lrow{display:grid;grid-template-columns:32px 1fr auto;gap:8px;align-items:center;padding:10px 12px;border-radius:12px}
+.lrow.me{background:var(--surface2);font-weight:700}
+.lline{font-size:.75rem;color:var(--sub);display:flex;align-items:center;gap:8px;margin:4px 0}
+.lline::before,.lline::after{content:"";flex:1;height:1px;background:var(--line)}
+/* mypage */
+.week{display:flex;align-items:flex-end;gap:8px;height:110px}
+.week div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.week i{display:block;width:100%;border-radius:6px 6px 0 0;background:var(--accent);min-height:3px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.badge{border-radius:12px;padding:12px 6px;text-align:center;background:var(--surface2);font-size:.8125rem;line-height:1.35}
+.badge .b{font-size:1.5rem;display:block;font-weight:900}
+.badge.off{opacity:.45}
+/* tools */
+.tuner{text-align:center}
+.tuner .note{font-size:4.5rem;font-weight:900;line-height:1}
+.meter{position:relative;height:48px;margin:16px 8px}
+.meter .scale{position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line)}
+.meter .center{position:absolute;left:50%;top:6px;bottom:6px;width:2px;background:var(--great);transform:translateX(-1px)}
+.meter .needle{position:absolute;top:0;bottom:0;width:6px;border-radius:3px;background:var(--accent);left:50%;transform:translateX(-3px);transition:left .08s linear}
+.strs{display:flex;justify-content:center;gap:6px}
+.strs span{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:2px solid var(--line);font-size:.9375rem}
+.strs span.on{color:#12141C}
+.beatdots{display:flex;justify-content:center;gap:12px;margin:16px 0}
+.beatdots i{width:22px;height:22px;border-radius:50%;background:var(--surface2)}
+.beatdots i.on{background:var(--accent)}
+.beatdots i.on.acc{background:var(--perfect)}
+.bpm{font-size:3.5rem;font-weight:900;text-align:center;line-height:1}
+/* settings */
+.set{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;border-top:1px solid var(--line);padding:6px 0}
+.set:first-child{border-top:0}
+.set select{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;max-width:58%}
+.switch{position:relative;width:52px;height:32px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:16px;background:var(--surface2);border:1px solid var(--line);transition:background .15s}
+.switch span::after{content:"";position:absolute;width:24px;height:24px;border-radius:50%;background:var(--text);top:3px;left:3px;transition:transform .15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(20px);background:#1A1C24}
+.switch input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+/* onboarding */
+.ob{min-height:calc(100vh - 40px);display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.ob .grow{flex:1}
+.steps{display:flex;gap:6px}
+.steps i{flex:1;height:4px;border-radius:2px;background:var(--surface2)}
+.steps i.on{background:var(--accent)}
+.calib-dots{display:flex;gap:8px;justify-content:center;margin:20px 0}
+.calib-dots i{width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--line)}
+.calib-dots i.tick{border-color:var(--accent)}
+.calib-dots i.hit{background:var(--great);border-color:var(--great)}
+.calib-dots i.missd{background:var(--miss);border-color:var(--miss)}
+.level{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.level i{display:block;height:100%;background:var(--great);width:0}
+.tapzone{min-height:140px;border-radius:12px;border:2px dashed var(--line);display:grid;place-items:center;font-weight:700;cursor:pointer;user-select:none;touch-action:manipulation;background:var(--surface)}
+/* play */
+#play{position:fixed;inset:0;z-index:50;background:#12141C;color:#F2F2F5;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
+#play.on{display:block}
+#play canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-right,0px) + 12px) 0 calc(env(safe-area-inset-left,0px) + 12px);display:flex;align-items:flex-start;gap:12px;pointer-events:none}
+.hud .stat{display:flex;flex-direction:column;line-height:1.15;min-width:64px}
+.hud .stat b{font-size:1.25rem;font-weight:900}
+.hud .stat small{font-size:.6875rem;color:#A0A4B8}
+.hud .next{flex:1;display:flex;justify-content:center;align-items:center;gap:10px}
+.hud .next .cn{font-size:2rem;font-weight:900;line-height:1}
+.hud .next .lab{font-size:.75rem;color:#A0A4B8;text-align:right;line-height:1.2}
+.hud .next svg{--surface:#1E2130;--text:#F2F2F5;--sub:#A0A4B8;--line:rgba(242,242,245,.2)}
+.hud .pause{pointer-events:auto;width:48px;height:48px;border-radius:14px;border:0;background:rgba(255,255,255,.08);color:#F2F2F5;display:grid;place-items:center;cursor:pointer}
+.hud .pause svg{width:24px;height:24px}
+.hud.lefty{flex-direction:row-reverse}
+.overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(18,20,28,.72);z-index:3}
+.overlay.on{display:flex}
+.panel{background:#1E2130;border-radius:12px;padding:20px;max-width:420px;width:100%;color:#F2F2F5;text-align:center;border:1px solid rgba(242,242,245,.12)}
+.panel h2{font-size:1.375rem}
+.panel p{color:#A0A4B8}
+.panel .btn{background:#282C3E;color:#F2F2F5;border-color:rgba(242,242,245,.12)}
+.panel .btn.primary{background:#FFB020;color:#1A1C24}
+.panel .level{background:#282C3E}
+.rotate-hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);transform:translateX(-50%);font-size:.75rem;color:#A0A4B8;pointer-events:none;white-space:nowrap}
+/* modal & toast */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(10,11,16,.6);display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:90;font-weight:500;max-width:90vw;display:none}
+.toast.on{display:block}
+textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px;font:inherit;color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:root.calm *{transition:none!important;animation:none!important}
+</style>
+</head>
+<body>
+<div id="app"><main id="view" tabindex="-1"></main></div>
+<nav class="tabs" id="tabs" aria-label="メイン"><div class="in" id="tabsIn"></div></nav>
+<div id="play" aria-label="プレイ画面">
+  <canvas id="cv"></canvas>
+  <div class="hud" id="hud">
+    <div class="stat"><b class="num" id="hScore">0</b><small>スコア</small></div>
+    <div class="stat"><b class="num" id="hCombo">0</b><small>コンボ</small></div>
+    <div class="stat"><b class="num" id="hAcc">–</b><small>正確さ</small></div>
+    <div class="next" id="hNext"></div>
+    <button class="pause" id="hPause" aria-label="一時停止"></button>
+  </div>
+  <div class="rotate-hint" id="rotHint">横向きにすると見やすくなります</div>
+  <div class="overlay" id="pOverlay"><div class="panel" id="pPanel"></div></div>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+/* ========== utilities ========== */
+const $=(s,el=document)=>el.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const rid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-5);
+const clone=o=>JSON.parse(JSON.stringify(o));
+function hashStr(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function prng(seed){let a=seed||1;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function deepMerge(base,over){const out=clone(base);if(!over||typeof over!=='object')return out;for(const k of Object.keys(over)){if(over[k]&&typeof over[k]==='object'&&!Array.isArray(over[k])&&out[k]&&typeof out[k]==='object'&&!Array.isArray(out[k]))out[k]=deepMerge(out[k],over[k]);else out[k]=over[k];}return out;}
+
+/* ========== 配信設定（「4. ゲームデザイン」のパラメータ表と同じキー） ========== */
+const DEFAULT_CONFIG={
+  judge:{perfect_ms:30,great_ms:60,good_ms:100},
+  score:{perfect:100,great:70,good:40,miss:0},
+  combo:{step_notes:10,step_rate:0.1,max_mult:2.0},
+  stars:{one:70,two:85,three:95},
+  unlock:{stars_to_next:1,boss_stars_to_next_world:2},
+  xp:{per_minute:10,first_star_bonus:[20,40,60],quest:30,quest_all_bonus:50,weak_card_cleared:20},
+  level:{base:100,step:40,max:100},
+  difficulty:{window:5,up_at:95,up_rate:5,down_at:70,down_rate:10,min_speed:50},
+  weak:{register_below:60,intervals_days:[1,3,7],graduate_passes:3,graduate_accuracy:85,max_cards:10},
+  quest:{count:3,reset_hour:4},
+  rest:{recommend_minutes_first:15,first_days:14,recommend_minutes:30},
+  league:{group_size:30,promote:7,demote:5,tiers:7},
+  calib:{clicks:8,interval_ms:500,max_std_ms:15,bt_perfect_std_ms:20},
+  detect:{onset_db_above_ambient:12,yin_threshold:0.15,pitch_cents:50,chord_match:0.8}
+};
+let CONFIG=deepMerge(DEFAULT_CONFIG,LS.get('fq.config',null));
+
+function dayKey(t=Date.now()){const d=new Date(t-CONFIG.quest.reset_hour*3600e3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function addDays(key,n){const[y,m,d]=key.split('-').map(Number);return dayKey(new Date(y,m-1,d+n,12).getTime());}
+function daysBetween(a,b){const[y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);return Math.round((new Date(y2,m2-1,d2,12)-new Date(y1,m1-1,d1,12))/864e5);}
+function weekStart(t=Date.now()){const[y,m,d]=dayKey(t).split('-').map(Number);const dt=new Date(y,m-1,d,12);const dow=(dt.getDay()+6)%7;return new Date(y,m-1,d-dow,CONFIG.quest.reset_hour).getTime();}
+function weekKey(t=Date.now()){return 'W'+dayKey(weekStart(t)+12*3600e3);}
+function fmtDay(key){const[y,m,d]=key.split('-').map(Number);const w='日月火水木金土'[new Date(y,m-1,d).getDay()];return `${m}/${d}（${w}）`;}
+
+/* ========== 音楽の基礎データ ========== */
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const OPEN=[null,64,59,55,50,45,40]; // 1弦〜6弦の開放（MIDI）
+const STR_NAMES=[null,'1弦 E','2弦 B','3弦 G','4弦 D','5弦 A','6弦 E'];
+const STRING_COLORS=[null,'#E8697D','#F29E4C','#E6D15A','#6CC4A1','#5B9BE6','#A77BE0'];
+const SHAPES={ // [1弦..6弦]、-1は鳴らさない弦
+  'Em':[0,0,0,2,2,0],'Am':[0,1,2,2,0,-1],'C':[0,1,0,2,3,-1],'G':[3,0,0,0,2,3],'D':[2,3,2,0,-1,-1],
+  'E':[0,0,1,2,2,0],'A':[0,2,2,2,0,-1],'Dm':[1,3,2,0,-1,-1],'F(簡易)':[1,1,2,3,-1,-1],'F':[1,1,2,3,3,1],
+  'Bm':[2,3,4,4,2,-1],'A7':[0,2,0,2,0,-1],'D7':[2,1,2,0,-1,-1],'E7':[0,0,1,0,2,0]
+};
+const _ci={};
+function chordInfo(name){
+  if(_ci[name])return _ci[name];
+  const sh=SHAPES[name];const strings=[],mute=[],midis=[];
+  for(let s=1;s<=6;s++){const f=sh[s-1];if(f<0)mute.push(s);else{strings.push(s);midis.push(OPEN[s]+f);}}
+  return _ci[name]={strings,mute,midis,pcs:[...new Set(midis.map(m=>m%12))]};
+}
+function rootMidi(name){if(!name)return null;const m=name.match(/^[A-G]#?/);if(!m)return null;const pc=NOTE_NAMES.indexOf(m[0]);return 36+((pc-4+12)%12)+4;} // E2(40)〜D#3
+function midiName(m){return NOTE_NAMES[((m%12)+12)%12];}
+
+/* ========== ワールドとステージ（「4. ゲームデザイン」3章） ========== */
+const Q4=[[0,'d'],[1,'d'],[2,'d'],[3,'d']], H2=[[0,'d'],[2,'d']], H3=[[0,'d'],[2,'d'],[3,'d']];
+const DDUUDU=[[0,'d'],[0.5,'gu'],[1,'d'],[1.5,'u'],[2,'gd'],[2.5,'u'],[3,'d'],[3.5,'u']];
+const PENTA=[[6,5],[6,8],[5,5],[5,7],[4,5],[4,7],[3,5],[3,7],[2,5],[2,8],[1,5],[1,8]];
+const PENTA_UD=[...PENTA,...PENTA.slice(1,-1).reverse()];
+const PENTA_3=(()=>{const o=[];for(let i=0;i<PENTA.length-2;i++)o.push(PENTA[i],PENTA[i+1],PENTA[i+2]);return o;})();
+const chromUp=(()=>{const o=[];for(let s=6;s>=1;s--)for(let f=1;f<=4;f++)o.push([s,f]);return o;})();
+const chromUD=(()=>{const o=[...chromUp];for(let s=1;s<=6;s++)for(let f=4;f>=1;f--)o.push([s,f]);return o;})();
+const finger1324=(()=>{const o=[];for(let s=6;s>=1;s--)for(const f of[1,3,2,4])o.push([s,f]);return o;})();
+const BLUES12=['A7','A7','A7','A7','D7','D7','A7','A7','E7','D7','A7','E7'];
+const LICK={
+  up:[[0,6,5],[0.5,6,8],[1,5,5],[1.5,5,7],[2,4,5],[2.5,4,7],[3,3,5],[3.5,3,7]],
+  a:[[0,1,5],[0.5,1,8],[1,2,8,'bend',10],[2,2,5],[2.5,3,7],[3,3,5]],
+  b:[[0,3,7,'slide',9],[1,2,8],[1.5,2,5],[2,3,7],[3,4,7]],
+  c:[[0,4,5],[0.5,4,7],[1,3,5],[1.5,3,7],[2,2,5],[3,1,5]],
+  d:[[0,2,8,'bend',10],[1.5,2,8],[2,1,5],[2.5,2,8],[3,2,5],[3.5,3,7]],
+  e:[[0,3,7],[1,4,7],[2,5,7],[3,6,5]],
+  s1:[[0,3,7,'slide',9],[2,3,7,'slide',9],[3,2,8]],
+  s2:[[0,4,7,'slide',9],[2,3,5],[3,3,7]],
+  k1:[[0,2,8,'bend',10],[2,1,5]],
+  k2:[[0,3,7,'bend',9],[2,3,5],[3,4,7]],
+  r:[[0,3,5],[2,4,7]]
+};
+const WORLDS=[
+ {name:'はじまりの草原',theme:'開放弦、単音、C・G・D・Em・Am',bpm:'60〜90',tint:'#2E6B43',
+  check:['ギターのボディを体に軽く付けて構える','押さえる指はフレットのすぐ手前に置く','弾いたあと、鳴らすべき弦が全部鳴っているか1本ずつ確かめる'],
+  stages:[
+   {t:'開放弦 1〜3弦',skill:'開放弦の単音（1〜3弦）',bpm:60,kind:'single',pool:[[1,0],[2,0],[3,0]],beats:[0,2],bass:['Em']},
+   {t:'開放弦 4〜6弦',skill:'開放弦の単音（4〜6弦）',bpm:60,kind:'single',pool:[[4,0],[5,0],[6,0]],beats:[0,2],bass:['Em']},
+   {t:'はじめてのEm',skill:'Emコード',bpm:60,kind:'chord',prog:['Em'],per:2,pat:H2},
+   {t:'復習：開放弦とEm',review:true,skill:'これまでの復習',bpm:70,kind:'mix',pool:[[1,0],[2,0],[3,0],[4,0],[5,0],[6,0]],beats:[0,2],prog:['Em'],per:1,pat:H2},
+   {t:'Amを押さえる',skill:'Amコード',bpm:70,kind:'chord',prog:['Am'],per:2,pat:H2},
+   {t:'EmとAmのチェンジ',skill:'2コードのチェンジ',bpm:70,kind:'chord',prog:['Em','Am'],per:2,pat:H2},
+   {t:'Cコード',skill:'Cコード',bpm:70,kind:'chord',prog:['C'],per:2,pat:H2},
+   {t:'復習：AmとC',review:true,skill:'これまでの復習',bpm:80,kind:'chord',prog:['Am','C'],per:2,pat:H2},
+   {t:'Gコード',skill:'Gコード',bpm:70,kind:'chord',prog:['G'],per:2,pat:H2},
+   {t:'Dコード',skill:'Dコード',bpm:70,kind:'chord',prog:['D'],per:2,pat:H2},
+   {t:'C・G・Dのチェンジ',skill:'3コードのチェンジ',bpm:80,kind:'chord',prog:['C','G','D','G'],per:2,pat:H2}],
+  boss:{t:'草原のうた',skill:'4コードの弾き語り',bpm:80,kind:'chord',prog:['C','G','Am','Em'],per:2,pat:H3}},
+ {name:'リズムの谷',theme:'8ビート、ダウンアップ、ミュート',bpm:'80〜120',tint:'#1E6A75',
+  check:['手首の力を抜いて、腕は振り子のように振る','空ピッキングのときも腕を止めない','ミュートは左手を弦に軽く触れるだけにする'],
+  stages:[
+   {t:'4分のダウン',skill:'ダウンストローク',bpm:80,kind:'chord',prog:['G'],per:1,pat:Q4},
+   {t:'ダウンでチェンジ',skill:'1小節ごとのチェンジ',bpm:80,kind:'chord',prog:['G','C'],per:1,pat:Q4},
+   {t:'アップを1つ入れる',skill:'アップストローク',bpm:80,kind:'chord',prog:['C'],per:1,pat:[[0,'d'],[1,'d'],[2,'d'],[2.5,'u'],[3,'d']]},
+   {t:'復習：G・C・D',review:true,skill:'これまでの復習',bpm:90,kind:'chord',prog:['G','C','D','G'],per:1,pat:Q4},
+   {t:'8分のダウンアップ',skill:'ダウンアップ',bpm:80,kind:'chord',prog:['Em'],per:1,pat:[[0,'d'],[0.5,'u'],[1,'d'],[1.5,'u'],[2,'d'],[3,'d']]},
+   {t:'空ピッキング',skill:'空ピッキング',bpm:80,kind:'chord',prog:['G'],per:1,pat:DDUUDU},
+   {t:'空ピッキングでチェンジ',skill:'8ビートでのチェンジ',bpm:85,kind:'chord',prog:['G','Em'],per:1,pat:DDUUDU},
+   {t:'復習：8ビート',review:true,skill:'これまでの復習',bpm:90,kind:'chord',prog:['C','G','Am','Em'],per:1,pat:DDUUDU},
+   {t:'ブラッシング',skill:'ミュート',bpm:90,kind:'chord',prog:['Am'],per:1,pat:[[0,'d'],[1,'x'],[2,'d'],[3,'x']]},
+   {t:'ミュート入り8ビート',skill:'ミュートとアップ',bpm:90,kind:'chord',prog:['Am'],per:1,pat:[[0,'d'],[1,'x'],[1.5,'u'],[2,'d'],[3,'x'],[3.5,'u']]},
+   {t:'復習：ミュートとチェンジ',review:true,skill:'これまでの復習',bpm:100,kind:'chord',prog:['C','G'],per:1,pat:[[0,'d'],[1,'x'],[2,'d'],[2.5,'u'],[3,'x']]}],
+  boss:{t:'谷を抜ける風',skill:'ストローク曲',bpm:120,kind:'chord',prog:['G','D','Em','C'],per:1,pat:[[0,'d'],[1,'x'],[2,'d'],[2.5,'u'],[3,'x']]}},
+ {name:'Fコードの塔',theme:'F・Bm、バレーコード',bpm:'70〜110',tint:'#563C86',
+  check:['人差し指は指の腹ではなく側面で押さえる','親指はネックの裏の真ん中あたりに置く','1本ずつ鳴らして、音が詰まる弦を探す'],
+  stages:[
+   {t:'簡易F',skill:'4本押さえのF',bpm:70,kind:'chord',prog:['F(簡易)'],per:1,pat:H2},
+   {t:'Cと簡易F',skill:'C⇄簡易Fのチェンジ',bpm:70,kind:'chord',prog:['C','F(簡易)'],per:1,pat:H2},
+   {t:'6本のF',skill:'バレーコードF',bpm:70,kind:'chord',prog:['F'],per:1,pat:H2},
+   {t:'復習：C・Am・F・G',review:true,skill:'これまでの復習',bpm:80,kind:'chord',prog:['C','Am','F','G'],per:1,pat:H3},
+   {t:'FとCのチェンジ',skill:'F⇄Cのチェンジ',bpm:80,kind:'chord',prog:['F','C'],per:1,pat:H2},
+   {t:'Dm',skill:'Dmコード',bpm:80,kind:'chord',prog:['Dm'],per:1,pat:H3},
+   {t:'Bm',skill:'Bmコード',bpm:70,kind:'chord',prog:['Bm'],per:1,pat:H2},
+   {t:'復習：DmとBm',review:true,skill:'これまでの復習',bpm:80,kind:'chord',prog:['Dm','G','Bm','Em'],per:1,pat:H3},
+   {t:'BmとGのチェンジ',skill:'Bm⇄Gのチェンジ',bpm:90,kind:'chord',prog:['Bm','G'],per:1,pat:Q4},
+   {t:'FとGのチェンジ',skill:'F⇄Gのチェンジ',bpm:90,kind:'chord',prog:['F','G'],per:1,pat:[[0,'d'],[1,'d'],[2,'d'],[2.5,'u'],[3,'d']]},
+   {t:'復習：Fを含む進行',review:true,skill:'これまでの復習',bpm:100,kind:'chord',prog:['Am','F','C','G'],per:1,pat:Q4}],
+  boss:{t:'塔のてっぺん',skill:'Fを含むポップス',bpm:100,kind:'chord',prog:['F','G','Em','Am'],per:1,pat:[[0,'d'],[1,'d'],[2,'d'],[2.5,'u'],[3,'d']]}},
+ {name:'指の森',theme:'アルペジオ、運指',bpm:'60〜100',tint:'#245A3C',
+  check:['1つのフレットに指を1本ずつ割り当てる','使わない指も弦の近くに置いておく','1音ずつ同じ大きさで鳴らす'],
+  stages:[
+   {t:'クロマチック',skill:'1フレット1指',bpm:60,kind:'seq',step:0.5,seq:chromUp,bass:['Am']},
+   {t:'クロマチックの往復',skill:'往復の運指',bpm:70,kind:'seq',step:0.5,seq:chromUD,bass:['Am']},
+   {t:'1・3・2・4',skill:'指の独立',bpm:70,kind:'seq',step:0.5,seq:finger1324,bass:['Am']},
+   {t:'復習：クロマチック',review:true,skill:'これまでの復習',bpm:80,kind:'seq',step:0.5,seq:chromUD,bass:['Am']},
+   {t:'3弦アルペジオ',skill:'3弦のアルペジオ',bpm:60,kind:'arp',prog:['C'],per:1,order:[3,2,1,2],step:0.5},
+   {t:'3弦アルペジオでチェンジ',skill:'アルペジオのチェンジ',bpm:70,kind:'arp',prog:['Am','C'],per:1,order:[3,2,1,2],step:0.5},
+   {t:'ベース音から',skill:'ベース音＋アルペジオ',bpm:70,kind:'arp',prog:['C','Am'],per:1,order:['B',3,2,1,2,3,2,1],step:0.5},
+   {t:'復習：GとEm',review:true,skill:'これまでの復習',bpm:80,kind:'arp',prog:['G','Em'],per:1,order:['B',3,2,3],step:0.5},
+   {t:'6弦アルペジオ',skill:'6弦アルペジオ',bpm:70,kind:'arp',prog:['G'],per:1,order:['B',4,3,2,1,2,3,4],step:0.5},
+   {t:'6弦アルペジオでチェンジ',skill:'6弦アルペジオのチェンジ',bpm:80,kind:'arp',prog:['C','G'],per:1,order:['B',4,3,2,1,2,3,4],step:0.5},
+   {t:'復習：4コードのアルペジオ',review:true,skill:'これまでの復習',bpm:90,kind:'arp',prog:['Am','Em','C','G'],per:1,order:['B',4,3,2,1,2,3,4],step:0.5}],
+  boss:{t:'森のバラード',skill:'アルペジオのバラード',bpm:72,kind:'arp',prog:['C','G','Am','F'],per:1,order:['B',3,2,3,1,3,2,3],step:0.5,style:'ballad'}},
+ {name:'ブルースの港',theme:'ペンタトニック、チョーキング、スライド',bpm:'70〜110',tint:'#1C3B6B',
+  check:['ペンタの形を指板を見ずに弾けるか確かめる','チョーキングは3本の指をそろえて押し上げる','スライドの間は指の圧を抜かない'],
+  stages:[
+   {t:'ペンタの上り',skill:'Aマイナーペンタ（上り）',bpm:70,kind:'seq',step:0.5,seq:PENTA,bass:['A7']},
+   {t:'ペンタの上り下り',skill:'ペンタの往復',bpm:80,kind:'seq',step:0.5,seq:PENTA_UD,bass:['A7']},
+   {t:'3音ずつ',skill:'3音シーケンス',bpm:80,kind:'seq',step:0.5,seq:PENTA_3,bass:['A7']},
+   {t:'復習：ペンタ',review:true,skill:'これまでの復習',bpm:90,kind:'seq',step:0.5,seq:PENTA_UD,bass:['A7','D7']},
+   {t:'スライド',skill:'スライド',bpm:80,kind:'phrase',phrases:[LICK.s1,LICK.r,LICK.s2,LICK.r],bass:['A7']},
+   {t:'スライドのフレーズ',skill:'スライドを含むフレーズ',bpm:90,kind:'phrase',phrases:[LICK.b,LICK.c,LICK.s1,LICK.e],bass:['A7','D7']},
+   {t:'チョーキング',skill:'チョーキング',bpm:80,kind:'phrase',phrases:[LICK.k1,LICK.r,LICK.k2,LICK.r],bass:['A7']},
+   {t:'復習：技を混ぜる',review:true,skill:'これまでの復習',bpm:90,kind:'phrase',phrases:[LICK.k1,LICK.s1,LICK.c,LICK.k2],bass:['A7','D7']},
+   {t:'短いソロ 1',skill:'短いソロ',bpm:90,kind:'phrase',phrases:[LICK.a,LICK.e,LICK.b,LICK.c],bass:['A7','A7','D7','A7']},
+   {t:'短いソロ 2',skill:'ソロをつなげる',bpm:100,kind:'phrase',phrases:[LICK.d,LICK.c,LICK.a,LICK.e],bass:['A7','D7','A7','E7']},
+   {t:'復習：ソロ',review:true,skill:'これまでの復習',bpm:100,kind:'phrase',phrases:[LICK.up,LICK.a,LICK.d,LICK.b],bass:['A7','D7','A7','E7']}],
+  boss:{t:'港のブルース',skill:'12小節ブルースのソロ',bpm:96,kind:'phrase',phrases:[LICK.a,LICK.e,LICK.b,LICK.c,LICK.d,LICK.r,LICK.a,LICK.c,LICK.k1,LICK.s1,LICK.d,LICK.e],bass:BLUES12,per:1}}
+];
+const STAGES={};
+WORLDS.forEach((w,wi)=>{w.no=wi+1;w.list=[...w.stages,{...w.boss,boss:true}];w.list.forEach((s,i)=>{s.no=i+1;s.world=w.no;s.id=`w${w.no}_s${String(i+1).padStart(2,'0')}`;STAGES[s.id]=s;});});
+
+/* 基礎ドリル（デイリークエスト3つ目） */
+const DRILLS={
+  open_all:{t:'開放弦を順番に弾く（1分）',light:true,minWorld:1,def:{bpm:70,kind:'seq',step:1,seq:[[6,0],[5,0],[4,0],[3,0],[2,0],[1,0]],bass:['Em']}},
+  open_high:{t:'1〜3弦の開放弦（1分）',light:true,minWorld:1,def:{bpm:60,kind:'single',pool:[[1,0],[2,0],[3,0]],beats:[0,1,2,3],bass:['Em']}},
+  open_low:{t:'4〜6弦の開放弦（1分）',light:true,minWorld:1,def:{bpm:60,kind:'single',pool:[[4,0],[5,0],[6,0]],beats:[0,1,2,3],bass:['Em']}},
+  open_jump:{t:'離れた弦を行き来する（1分）',light:true,minWorld:1,def:{bpm:60,kind:'seq',step:1,seq:[[6,0],[1,0],[5,0],[2,0],[4,0],[3,0]],bass:['Em']}},
+  ch_em_am:{t:'Em→Amのチェンジ（1分）',minWorld:1,def:{bpm:70,kind:'chord',prog:['Em','Am'],per:1,pat:H2}},
+  ch_c_g:{t:'C→Gのチェンジ（1分）',minWorld:1,def:{bpm:70,kind:'chord',prog:['C','G'],per:1,pat:H2}},
+  ch_g_d:{t:'G→Dのチェンジ（1分）',minWorld:1,def:{bpm:70,kind:'chord',prog:['G','D'],per:1,pat:H2}},
+  strum_du:{t:'8分のダウンアップ（1分）',minWorld:2,def:{bpm:70,kind:'chord',prog:['G'],per:1,pat:[[0,'d'],[0.5,'u'],[1,'d'],[1.5,'u'],[2,'d'],[2.5,'u'],[3,'d'],[3.5,'u']]}},
+  ch_c_f:{t:'C→Fのチェンジ（1分）',minWorld:3,def:{bpm:70,kind:'chord',prog:['C','F'],per:1,pat:H2}},
+  chromatic:{t:'クロマチック（1分）',minWorld:4,def:{bpm:70,kind:'seq',step:0.5,seq:chromUp,bass:['Am'],world:4}},
+  penta:{t:'ペンタの上り下り（1分）',minWorld:5,def:{bpm:80,kind:'seq',step:0.5,seq:PENTA_UD,bass:['A7'],world:5}}
+};
+Object.entries(DRILLS).forEach(([k,d])=>{d.id=k;d.def.id='drill_'+k;d.def.world=d.def.world||1;d.def.t=d.t;d.def.skill='基礎ドリル';});
+
+/* ========== 譜面の生成（「6. サウンド・譜面」3章の形式） ========== */
+function barEvents(def,b,rnd,st){
+  const ev=[];let chord=null;
+  const bassAt=()=>{const arr=def.bass||['Em'];return arr[Math.floor(b/(def.per||1))%arr.length];};
+  const chordEvents=(ch)=>{for(const[bt,d]of def.pat){if(d==='gd'||d==='gu')ev.push({beat:bt,ghost:true,dir:d==='gd'?'down':'up'});else if(d==='x')ev.push({beat:bt,type:'mute',chord:ch,strum:'down'});else ev.push({beat:bt,type:'chord',chord:ch,strum:d==='u'?'up':'down'});}};
+  const singleEvents=()=>{for(const bt of def.beats){let i;do{i=Math.floor(rnd()*def.pool.length);}while(def.pool.length>1&&i===st.last);st.last=i;const[s,f]=def.pool[i];ev.push({beat:bt,type:'single',string:s,fret:f});}};
+  switch(def.kind){
+    case 'single':chord=bassAt();singleEvents();break;
+    case 'chord':chord=def.prog[Math.floor(b/def.per)%def.prog.length];chordEvents(chord);break;
+    case 'mix':chord=def.prog[Math.floor(b/def.per)%def.prog.length];if(b%2===0)chordEvents(chord);else singleEvents();break;
+    case 'arp':{chord=def.prog[Math.floor(b/def.per)%def.prog.length];const info=chordInfo(chord);const bassS=Math.max(...info.strings);const n=Math.round(4/def.step);
+      for(let k=0;k<n;k++){const o=def.order[k%def.order.length];const s=o==='B'?bassS:o;if(!info.strings.includes(s))continue;ev.push({beat:k*def.step,type:'single',string:s,fret:SHAPES[chord][s-1],chord});}break;}
+    case 'seq':{chord=bassAt();const n=Math.round(4/def.step);for(let k=0;k<n;k++){const[s,f,tech,to]=def.seq[st.i++%def.seq.length];ev.push({beat:k*def.step,type:'single',string:s,fret:f,tech,to});}break;}
+    case 'phrase':{chord=bassAt();const ph=def.phrases[b%def.phrases.length];for(const[bt,s,f,tech,to]of ph)ev.push({beat:bt,type:'single',string:s,fret:f,tech,to});break;}
+  }
+  return{ev,chord};
+}
+function finalizeNote(n){
+  if(n.type==='single'){n.midi=OPEN[n.string]+n.fret;n.alts=[n.midi];if(n.to!=null)n.alts.push(OPEN[n.string]+n.to);}
+  else{const ci=chordInfo(n.chord);n.strings=ci.strings;n.mute=ci.mute;n.pcs=ci.pcs;}
+  n.judged=null;n.claimed=false;return n;
+}
+function buildChart(def,speed=100,opt={}){
+  const bpm=def.bpm*speed/100,beatMs=60000/bpm,barMs=beatMs*4,baseBar=240000/def.bpm;
+  const bars=opt.bars||(def.boss?Math.ceil(90000/baseBar/4)*4:Math.max(8,Math.ceil(30000/baseBar/4)*4));
+  const rnd=prng(hashStr(def.id||'x'));const st={i:0,last:-1};
+  const notes=[],ghosts=[],barChords=[null];const minGap=(def.world>=4?150:200);let lastT=-1e9;
+  for(let b=0;b<bars;b++){
+    const{ev,chord}=barEvents(def,b,rnd,st);barChords.push(chord);
+    for(const e of ev){const t=barMs*(b+1)+e.beat*beatMs;if(e.ghost){ghosts.push({t,dir:e.dir});continue;}if(t-lastT<minGap)continue;lastT=t;notes.push(finalizeNote({...e,t,bar:b+1}));}
+  }
+  return{id:def.id,def,speed,bpm,beatMs,barMs,bars,notes,ghosts,barChords,endMs:barMs*(bars+1)+1200,world:def.world||1};
+}
+/* 苦手カード用：1小節を4回くり返す譜面 */
+function buildBarChart(def,speed,bar,reps=4){
+  const full=buildChart(def,speed);const{barMs}=full;const src=full.notes.filter(n=>n.bar===bar);const gh=full.ghosts.filter(g=>g.t>=bar*barMs&&g.t<(bar+1)*barMs);
+  const notes=[],ghosts=[],barChords=[null];
+  for(let r=0;r<reps;r++){barChords.push(full.barChords[bar]);const off=(r+1)*barMs-bar*barMs;
+    for(const n of src){const c=clone(n);c.t=n.t+off;c.bar=r+1;c.judged=null;c.claimed=false;notes.push(c);}
+    for(const g of gh)ghosts.push({t:g.t+off,dir:g.dir});}
+  return{...full,bars:reps,notes,ghosts,barChords,endMs:barMs*(reps+1)+1200};
+}
+/* ========== 信号処理（DSP_BEGIN） ========== */
+function makeFFT(n){
+  const cos=new Float32Array(n/2),sin=new Float32Array(n/2),rev=new Uint32Array(n),win=new Float32Array(n);
+  for(let i=0;i<n/2;i++){cos[i]=Math.cos(2*Math.PI*i/n);sin[i]=Math.sin(2*Math.PI*i/n);}
+  const bits=Math.log2(n)|0;for(let i=0;i<n;i++){let r=0,x=i;for(let b=0;b<bits;b++){r=(r<<1)|(x&1);x>>=1;}rev[i]=r;}
+  for(let i=0;i<n;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(n-1));
+  function fft(re,im){
+    for(let i=0;i<n;i++){const j=rev[i];if(j>i){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+    for(let size=2;size<=n;size<<=1){const half=size>>1,step=n/size;
+      for(let i=0;i<n;i+=size){for(let j=i,k=0;j<i+half;j++,k+=step){const l=j+half;const tre=re[l]*cos[k]+im[l]*sin[k];const tim=-re[l]*sin[k]+im[l]*cos[k];re[l]=re[j]-tre;im[l]=im[j]-tim;re[j]+=tre;im[j]+=tim;}}}
+  }
+  fft.win=win;fft.n=n;return fft;
+}
+/* YIN法：窓2048、閾値0.15 */
+function yin(buf,sr,thr){
+  const W=buf.length>>1;const d=new Float32Array(W);
+  for(let tau=1;tau<W;tau++){let s=0;for(let j=0;j<W;j++){const x=buf[j]-buf[j+tau];s+=x*x;}d[tau]=s;}
+  d[0]=1;let run=0;for(let tau=1;tau<W;tau++){run+=d[tau];d[tau]=run>0?d[tau]*tau/run:1;}
+  const minTau=Math.max(2,Math.floor(sr/1400));let tau=-1;
+  for(let t=minTau;t<W-1;t++){if(d[t]<thr){while(t+1<W-1&&d[t+1]<d[t])t++;tau=t;break;}}
+  if(tau<0)return{freq:0,conf:0};
+  const s0=d[tau-1],s1=d[tau],s2=d[tau+1];const den=2*(2*s1-s2-s0);const better=den?tau+(s2-s0)/den:tau;
+  return{freq:sr/better,conf:1-s1};
+}
+/* 期待する音（音名）の周期で累積平均正規化差分が十分小さいか。前の音の残響があっても判定できる */
+function yinHasPitch(buf,sr,midis,thr,cents){
+  const W=buf.length>>1;const d=new Float32Array(W);
+  for(let tau=1;tau<W;tau++){let s=0;for(let j=0;j<W;j++){const x=buf[j]-buf[j+tau];s+=x*x;}d[tau]=s;}
+  d[0]=1;let run=0;for(let tau=1;tau<W;tau++){run+=d[tau];d[tau]=run>0?d[tau]*tau/run:1;}
+  const r=cents/1200;
+  const dip=(m0)=>{let best=1;for(const sh of[0,12,-12,24]){const f=440*2**((m0+sh-69)/12);const tc=sr/f;if(tc<4||tc>W-2)continue;const a=Math.floor(tc*2**(-r)),b=Math.ceil(tc*2**(r));for(let t=a;t<=b;t++)if(d[t]<best)best=d[t];}return best;};
+  let want=1;for(const m of midis)want=Math.min(want,dip(m));
+  let other=1;for(const k of[-2,-1,1,2]){const m=midis[0]+k;if(midis.some(x=>((x-m)%12+12)%12===0))continue;other=Math.min(other,dip(m));}
+  return want<=thr&&want<other*0.85;
+}
+function pcDistanceCents(freq,midi){const m=69+12*Math.log2(freq/440);let d=((m-midi)%12+12)%12;if(d>6)d-=12;return Math.abs(d)*100;}
+/* クロマ特徴（12次元） */
+function chromaOf(seg,sr,fft){
+  const n=fft.n,re=new Float32Array(n),im=new Float32Array(n);const L=Math.min(n,seg.length);
+  for(let i=0;i<L;i++)re[i]=seg[i]*fft.win[i];fft(re,im);
+  const ch=new Float32Array(12);const k0=Math.floor(75*n/sr),k1=Math.min(n/2-1,Math.ceil(2100*n/sr));
+  for(let k=k0;k<=k1;k++){const f=k*sr/n;const mag=Math.hypot(re[k],im[k]);const m=69+12*Math.log2(f/440);const r=Math.round(m);const w=1-Math.min(1,Math.abs(m-r)*2);if(w<=0)continue;ch[((r%12)+12)%12]+=mag*w;}
+  let mx=0;for(const v of ch)mx=Math.max(mx,v);if(mx>0)for(let i=0;i<12;i++)ch[i]/=mx;return ch;
+}
+function chordMatch(chroma,pcs){let hit=0;for(const pc of pcs)if(chroma[pc]>=0.3)hit++;return hit/pcs.length;}
+/* 発音検出：スペクトルフラックス（窓1024、ホップ128）＋環境音レベル基準のゲート */
+class OnsetDetector{
+  constructor(sr){this.sr=sr;this.FR=1024;this.HOP=128;this.fft=makeFFT(1024);this.re=new Float32Array(1024);this.im=new Float32Array(1024);
+    this.kMax=Math.min(511,Math.ceil(6000*1024/sr));this.prev=new Float32Array(512);this.mu=0;this.va=1;this.prevFlux=0;this.last=-1e9;this.ambientDb=-60;this.gateDb=12;this.db=-100;}
+  /* frame: Float32Array(1024)。idx = フレーム最新ホップの先頭サンプル番号。戻り値 true で発音 */
+  step(frame,idx){
+    const re=this.re,im=this.im,w=this.fft.win;let e=0;
+    for(let i=0;i<1024;i++){re[i]=frame[i]*w[i];im[i]=0;}
+    for(let i=1024-128;i<1024;i++)e+=frame[i]*frame[i];
+    const db=10*Math.log10(e/128+1e-12);this.db=db;
+    this.fft(re,im);let flux=0;
+    for(let k=2;k<this.kMax;k++){const m=Math.log1p(20*Math.hypot(re[k],im[k]));const d=m-this.prev[k];if(d>0)flux+=d;this.prev[k]=m;}
+    const thr=this.mu+2.5*Math.sqrt(Math.max(this.va,0))+2;
+    const on=flux>thr&&flux>=this.prevFlux&&db>this.ambientDb+this.gateDb&&(idx-this.last)>this.sr*0.07;
+    const fl=Math.min(flux,thr*1.5);this.mu+=0.02*(fl-this.mu);this.va+=0.02*((fl-this.mu)*(fl-this.mu)-this.va);
+    this.prevFlux=flux;if(on)this.last=idx;return on;
+  }
+}
+/* ========== DSP_END ========== */
+
+/* ========== 音の再生（伴奏・クリック・見本） ========== */
+const A={
+  ctx:null,master:null,bus:null,clickBus:null,noise:null,pl:{},
+  init(){
+    if(this.ctx)return this.ctx;
+    const C=window.AudioContext||window.webkitAudioContext;
+    try{this.ctx=new C({latencyHint:'interactive'});}catch(e){this.ctx=new C();}
+    const c=this.ctx;this.master=c.createGain();this.master.connect(c.destination);
+    this.bus=c.createGain();this.bus.gain.value=Settings.get().volume;this.bus.connect(this.master);
+    this.clickBus=c.createGain();this.clickBus.gain.value=0.6;this.clickBus.connect(this.master);
+    const nb=c.createBuffer(1,c.sampleRate,c.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;this.noise=nb;
+    c.onstatechange=()=>{if(c.state==='interrupted'&&Play.state==='playing')Play.pause('通話などで音声が中断されたため一時停止しました');};
+    return c;
+  },
+  async resume(){this.init();if(this.ctx.state!=='running'){try{await this.ctx.resume();}catch(e){}}},
+  setVolume(v){if(this.bus)this.bus.gain.value=v;},
+  heardTime(){const c=this.ctx;try{const ts=c.getOutputTimestamp&&c.getOutputTimestamp();if(ts&&ts.contextTime>0&&ts.performanceTime>0)return ts.contextTime+(performance.now()-ts.performanceTime)/1000;}catch(e){}return c.currentTime-(c.outputLatency||c.baseLatency||0);},
+  eventCtxTime(ev){const c=this.ctx;try{const ts=c.getOutputTimestamp&&c.getOutputTimestamp();if(ts&&ts.performanceTime>0)return ts.contextTime+(ev.timeStamp-ts.performanceTime)/1000;}catch(e){}return c.currentTime;},
+  env(g,t,a,peak,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec);},
+  click(t,acc,out){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=acc?1760:1320;this.env(g,t,0.001,acc?0.35:0.22,0.04);o.connect(g).connect(out||this.clickBus);o.start(t);o.stop(t+0.06);return o;},
+  kick(t,v=1){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+0.13);this.env(g,t,0.002,0.85*v,0.22);o.connect(g).connect(this.bus);o.start(t);o.stop(t+0.3);return o;},
+  snare(t,v=1){const c=this.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=this.noise;f.type='highpass';f.frequency.value=1800;this.env(g,t,0.001,0.32*v,0.13);s.connect(f).connect(g).connect(this.bus);s.start(t,Math.random()*0.5);s.stop(t+0.18);return s;},
+  hat(t,v=1){const c=this.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=this.noise;f.type='highpass';f.frequency.value=7500;this.env(g,t,0.001,0.12*v,0.045);s.connect(f).connect(g).connect(this.bus);s.start(t,Math.random()*0.5);s.stop(t+0.08);return s;},
+  bass(t,m,dur,v=1){const c=this.ctx,o=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o.type='triangle';o.frequency.value=440*2**((m-12-69)/12);f.type='lowpass';f.frequency.value=500;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5*v,t+0.01);g.gain.setValueAtTime(0.5*v,t+dur*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(f).connect(g).connect(this.bus);o.start(t);o.stop(t+dur+0.02);return o;},
+  pluckBuf(m){if(this.pl[m])return this.pl[m];const c=this.ctx,sr=c.sampleRate,f=440*2**((m-69)/12),N=Math.max(2,Math.round(sr/f)),len=Math.floor(sr*1.8);
+    const buf=c.createBuffer(1,len,sr),d=buf.getChannelData(0),ring=new Float32Array(N);let lp=0;for(let i=0;i<N;i++){lp=lp*0.5+(Math.random()*2-1)*0.5;ring[i]=lp;}
+    let idx=0;for(let i=0;i<len;i++){const cur=ring[idx],nx=ring[(idx+1)%N];ring[idx]=0.996*0.5*(cur+nx);d[i]=cur*0.6;idx=(idx+1)%N;}return this.pl[m]=buf;},
+  pluck(t,m,v=1,out){const c=this.ctx,s=c.createBufferSource(),g=c.createGain();s.buffer=this.pluckBuf(m);g.gain.value=0.5*v;s.connect(g).connect(out||this.master);s.start(t);return s;},
+  /* 伴奏のイベント列（利用者が弾くギターパートは入れない） */
+  backingEvents(chart,withClick){
+    const ev=[],{beatMs,barMs,bars}=chart;const ballad=chart.def.style==='ballad';
+    for(let k=0;k<4;k++)ev.push({t:k*beatMs,k:'click',acc:k===0,count:4-k});
+    for(let b=1;b<=bars;b++){const t0=b*barMs,root=rootMidi(chart.barChords[b]);
+      if(ballad){ev.push({t:t0,k:'kick',v:0.7});for(let k=0;k<4;k++)ev.push({t:t0+k*beatMs,k:'hat',v:0.5});if(root!=null)ev.push({t:t0,k:'bass',m:root,d:barMs*0.95/1000});}
+      else{for(let k=0;k<8;k++)ev.push({t:t0+k*beatMs/2,k:'hat',v:k%2?0.55:0.9});ev.push({t:t0,k:'kick'},{t:t0+2*beatMs,k:'kick'},{t:t0+beatMs,k:'snare'},{t:t0+3*beatMs,k:'snare'});
+        if(root!=null){ev.push({t:t0,k:'bass',m:root,d:beatMs*1.8/1000},{t:t0+2*beatMs,k:'bass',m:root,d:beatMs*1.8/1000});}}
+      if(withClick)for(let k=0;k<4;k++)ev.push({t:t0+k*beatMs,k:'click',acc:false,soft:true});
+    }
+    const end=(bars+1)*barMs,lr=rootMidi(chart.barChords[bars]);ev.push({t:end,k:'kick'});if(lr!=null)ev.push({t:end,k:'bass',m:lr,d:1.2});
+    return ev.sort((a,b)=>a.t-b.t);
+  },
+  fire(e,t){switch(e.k){case 'click':return this.click(t,e.acc,e.soft?this.bus:null);case 'kick':return this.kick(t,e.v);case 'snare':return this.snare(t,e.v);case 'hat':return this.hat(t,e.v);case 'bass':return this.bass(t,e.m,e.d);case 'pluck':return this.pluck(t,e.m,e.v,this.bus);}}
+};
+/* 先読みスケジューラ */
+class Scheduler{
+  constructor(events,songStart,fromMs){this.ev=events;this.start=songStart;this.i=0;while(this.i<events.length&&events[this.i].t<fromMs-1)this.i++;this.nodes=[];this.timer=null;}
+  run(){this.tick();this.timer=setInterval(()=>this.tick(),25);}
+  tick(){const c=A.ctx,horizon=(c.currentTime-this.start)*1000+180;while(this.i<this.ev.length&&this.ev[this.i].t<=horizon){const e=this.ev[this.i++];const t=this.start+e.t/1000;if(t<c.currentTime-0.02)continue;const n=A.fire(e,Math.max(t,c.currentTime));if(n)this.nodes.push({n,end:t+3});}
+    if(this.nodes.length>200){const now=c.currentTime;this.nodes=this.nodes.filter(x=>x.end>now);}}
+  stop(){clearInterval(this.timer);this.timer=null;const now=A.ctx.currentTime;for(const x of this.nodes){try{x.n.stop(now+0.01);}catch(e){}}this.nodes=[];}
+  done(){return this.i>=this.ev.length;}
+}
+/* 見本（ギターパートの見本演奏を合成音で鳴らす） */
+const Guide={sch:null,
+  async play(chart,bars=4){await A.resume();this.stop();
+    const ev=A.backingEvents(chart,false).filter(e=>e.t<(bars+1)*chart.barMs);
+    for(const n of chart.notes){if(n.bar>bars)break;
+      if(n.type==='single')ev.push({t:n.t,k:'pluck',m:n.midi,v:1.1});
+      else if(n.type==='chord'){const ss=n.strum==='up'?[...n.strings].sort((a,b)=>a-b):[...n.strings].sort((a,b)=>b-a);ss.forEach((s,i)=>ev.push({t:n.t+i*12,k:'pluck',m:OPEN[s]+SHAPES[n.chord][s-1],v:n.strum==='up'?0.6:0.8}));}
+      else ev.push({t:n.t,k:'snare',v:0.5});}
+    ev.sort((a,b)=>a.t-b.t);this.sch=new Scheduler(ev,A.ctx.currentTime+0.1,0);this.sch.run();
+    const total=(bars+1)*chart.barMs+1500;clearTimeout(this.to);this.to=setTimeout(()=>{this.stop();render();},total);return total;},
+  stop(){clearTimeout(this.to);if(this.sch){this.sch.stop();this.sch=null;}},
+  get on(){return!!this.sch;}
+};
+
+/* ========== マイク入力と判定用の解析 ========== */
+const Mic={
+  stream:null,node:null,ok:false,error:null,ring:null,mask:0,pos:0,sr:48000,anchor:Infinity,t0:0,det:null,nextHop:0,frame:new Float32Array(1024),
+  listeners:new Set(),reqs:[],fft8k:null,hint:'',reason:null,
+  /* 許可を求める前に、この表示でマイクが使えないと分かる場合の理由を返す（使える見込みなら null） */
+  support(){
+    if(!window.isSecureContext)return'https';
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return'unsupported';
+    try{const fp=document.permissionsPolicy||document.featurePolicy;if(fp&&typeof fp.allowsFeature==='function'&&!fp.allowsFeature('microphone'))return'policy';}catch(e){}
+    return null;
+  },
+  /* 理由ごとの見出しと対処 */
+  explain(reason){
+    const M={
+      https:['この開き方ではマイクを使えません','マイクはHTTPSで公開したページでだけ使えます。ファイルを直接開いた場合は、公開したURLから開き直してください。'],
+      unsupported:['このブラウザではマイクを使えません','iPhoneはSafari、AndroidはChromeで開いてください。'],
+      policy:['この表示ではマイクを使えません','埋め込みの表示ではマイクが使えない仕組みです。ホーム画面に追加したアプリか、ブラウザで直接開いてください。'],
+      denied:['マイクの使用が拒否されています','端末の設定で、このアプリ（またはブラウザ）のマイクを許可してから、もう一度お試しください。'],
+      notfound:['マイクが見つかりません','マイク付きのイヤホンや外部マイクの接続を確かめてください。'],
+      busy:['マイクがほかのアプリで使用中です','通話や録音のアプリを閉じてから、もう一度お試しください。'],
+      other:['マイクを開始できませんでした','アプリを開き直してから、もう一度お試しください。']};
+    return M[reason]||M.other;
+  },
+  fail(reason){this.reason=reason;const[e,h]=this.explain(reason);this.error=e;this.hint=h;return false;},
+  async start(){
+    if(this.ok)return true;
+    await A.resume();const c=A.ctx;
+    const pre=this.support();if(pre)return this.fail(pre);
+    try{
+      const speaker=Settings.get().route==='speaker';
+      try{this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:speaker,noiseSuppression:false,autoGainControl:false,channelCount:1}});}
+      catch(e1){if(e1&&e1.name==='OverconstrainedError')this.stream=await navigator.mediaDevices.getUserMedia({audio:true});else throw e1;}
+    }catch(e){const n=e&&e.name;
+      if(n==='NotAllowedError'||n==='SecurityError')return this.fail(window.self!==window.top?'policy':'denied');
+      if(n==='NotFoundError'||n==='DevicesNotFoundError')return this.fail('notfound');
+      if(n==='NotReadableError'||n==='TrackStartError'||n==='AbortError')return this.fail('busy');
+      return this.fail('other');}
+    this.sr=c.sampleRate;this.ring=new Float32Array(1<<18);this.mask=this.ring.length-1;this.pos=0;this.nextHop=0;this.anchor=Infinity;this.t0=performance.now();
+    this.det=new OnsetDetector(this.sr);this.det.gateDb=Settings.get().gate;this.fft8k=makeFFT(8192);
+    const src=c.createMediaStreamSource(this.stream);const node=c.createScriptProcessor(512,1,1);const z=c.createGain();z.gain.value=0;
+    src.connect(node);node.connect(z);z.connect(c.destination);node.onaudioprocess=e=>this.process(e.inputBuffer.getChannelData(0));
+    this.node=node;this._src=src;this.ok=true;this.error=null;this.hint='';this.reason=null;
+    this.stream.getAudioTracks().forEach(t=>t.addEventListener('ended',()=>{this.ok=false;try{node.disconnect();src.disconnect();}catch(e){}}));
+    return true;
+  },
+  process(buf){
+    const n=buf.length,r=this.ring,m=this.mask;for(let i=0;i<n;i++)r[(this.pos+i)&m]=buf[i];this.pos+=n;
+    if(performance.now()-this.t0<4000){const a=A.ctx.currentTime-this.pos/this.sr;if(a<this.anchor)this.anchor=a;}
+    const active=this.listeners.size>0;
+    while(this.nextHop+1024<=this.pos){const s=this.nextHop;
+      if(active||this.meter){for(let i=0;i<1024;i++)this.frame[i]=r[(s+i)&m];const idx=s+1024-128;const on=this.det.step(this.frame,idx);
+        if(this.measure){this.measure.sum+=this.det.db;this.measure.n++;}
+        if(on&&active){const ev={idx,time:this.timeOf(idx),db:this.det.db};for(const fn of this.listeners)fn(ev);}}
+      this.nextHop+=128;}
+    if(this.reqs.length){const keep=[];for(const q of this.reqs){if(this.pos>=q.start+q.len){const seg=new Float32Array(q.len);for(let i=0;i<q.len;i++)seg[i]=r[(q.start+i)&m];q.cb(seg);}else keep.push(q);}this.reqs=keep;}
+  },
+  timeOf(idx){return this.anchor+idx/this.sr;},
+  request(start,len,cb){this.reqs.push({start,len,cb});},
+  latest(n){const out=new Float32Array(n);const s=this.pos-n;for(let i=0;i<n;i++)out[i]=this.ring[(s+i)&this.mask];return out;},
+  /* 環境音を測る（ms） */
+  measureAmbient(ms){return new Promise(res=>{this.meter=true;this.measure={sum:0,n:0};setTimeout(()=>{const m=this.measure;this.measure=null;this.meter=false;const db=m&&m.n?m.sum/m.n:-60;this.det.ambientDb=Math.max(-90,Math.min(-25,db));res(this.det.ambientDb);},ms);});},
+  level(){return this.det?this.det.db:-100;},
+  setGate(v){if(this.det)this.det.gateDb=v;},
+  /* 音の判定：単音はYIN、和音はクロマ */
+  checkNote(ev,note,cb){
+    const sr=this.sr;
+    if(note.type==='single'){this.request(ev.idx+Math.round(0.035*sr),2048,seg=>{const r=yin(seg,sr,CONFIG.detect.yin_threshold);const ok=(r.freq>0&&note.alts.some(mm=>pcDistanceCents(r.freq,mm)<=CONFIG.detect.pitch_cents))||yinHasPitch(seg,sr,note.alts,0.5,CONFIG.detect.pitch_cents);cb(ok,r.freq?midiName(Math.round(69+12*Math.log2(r.freq/440))):'?');});}
+    else if(note.type==='chord'){this.request(ev.idx+Math.round(0.05*sr),Math.round(0.17*sr),seg=>{const ch=chromaOf(seg,sr,this.fft8k);cb(chordMatch(ch,note.pcs)>=CONFIG.detect.chord_match,'');});}
+    else cb(true,'');
+  }
+};
+/* ========== 端末の設定（同期しない） ========== */
+const Settings={
+  d:{theme:'system',route:'wired',input:'mic',hand:'right',calm:false,fs:1,light:false,volume:0.7,click:true,gate:12},
+  get(){return this._v||(this._v={...this.d,...LS.get('fq.settings',{})});},
+  set(k,v){const s=this.get();s[k]=v;LS.set('fq.settings',s);applySettings();}
+};
+function applySettings(){
+  const s=Settings.get(),r=document.documentElement;
+  if(s.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',s.theme);
+  r.style.setProperty('--fs',s.fs);r.classList.toggle('calm',!!s.calm);A.setVolume(s.volume);Mic.setGate(s.gate);
+}
+/* 遅延の補正値：端末と出力経路（＋入力方法）の組ごと */
+const ROUTES={wired:'有線イヤホン',speaker:'スピーカー',bluetooth:'Bluetooth',external:'オーディオIF'};
+function calibKey(){const s=Settings.get();return s.route+'|'+s.input;}
+function getCalib(){const c=LS.get('fq.calib',{})[calibKey()];if(c)return c;const s=Settings.get();
+  let lat=60;try{if(A.ctx)lat=((A.ctx.outputLatency||0)+(A.ctx.baseLatency||0))*1000+(s.input==='mic'?25:0);}catch(e){}
+  if(s.route==='bluetooth')lat+=150;return{offset:Math.round(lat),std:null,assumed:true};}
+function saveCalib(v){const all=LS.get('fq.calib',{});all[calibKey()]=v;LS.set('fq.calib',all);}
+
+/* ========== 進捗データ（端末内保存＋サーバー同期） ========== */
+const STORE_KEY='fq.progress.v1';
+function blankProgress(){return{v:1,profile:null,stars:{},best:{},xpEvents:[],weak:[],weakDone:{},quests:null,history:[],playLog:{},recent:{},speed:{},drillHist:{},maxCombo:0,updatedAt:0};}
+let P=deepMerge(blankProgress(),LS.get(STORE_KEY,{}));
+function save(){P.updatedAt=Date.now();LS.set(STORE_KEY,P);Sync.schedule();}
+function mergeProgress(a,b){
+  if(!b)return a;const m=deepMerge(blankProgress(),a);
+  if(b.profile&&(!a.profile||(b.profile.updatedAt||0)>(a.profile.updatedAt||0)))m.profile=b.profile;
+  for(const k in b.stars||{})m.stars[k]=Math.max(m.stars[k]||0,b.stars[k]);
+  for(const k in b.best||{})m.best[k]=Math.max(m.best[k]||0,b.best[k]);
+  const ids=new Set(m.xpEvents.map(e=>e.i));for(const e of b.xpEvents||[])if(!ids.has(e.i)){m.xpEvents.push(e);ids.add(e.i);}
+  m.xpEvents.sort((x,y)=>x.t-y.t);
+  for(const k in b.weakDone||{})m.weakDone[k]=Math.max(m.weakDone[k]||0,b.weakDone[k]);
+  const wm=new Map(m.weak.map(w=>[w.id,w]));for(const w of b.weak||[]){const x=wm.get(w.id);if(!x||(w.updatedAt||0)>(x.updatedAt||0))wm.set(w.id,w);}
+  m.weak=[...wm.values()].filter(w=>!m.weakDone[w.id]);
+  if(b.quests){if(!m.quests||b.quests.day>m.quests.day)m.quests=b.quests;else if(b.quests.day===m.quests.day){m.quests.list.forEach((q,i)=>{const o=b.quests.list[i];if(o&&o.kind===q.kind&&o.ref===q.ref&&o.done)q.done=true;});m.quests.allBonus=m.quests.allBonus||b.quests.allBonus;}}
+  const hm=new Map(m.history.map(h=>[h.id,h]));for(const h of b.history||[])hm.set(h.id,h);m.history=[...hm.values()].sort((x,y)=>x.t-y.t).slice(-100);
+  for(const k in b.playLog||{})m.playLog[k]=Math.max(m.playLog[k]||0,b.playLog[k]);
+  if((b.updatedAt||0)>(a.updatedAt||0)){m.recent=b.recent||{};m.speed=b.speed||{};}
+  for(const k in b.drillHist||{})m.drillHist[k]=b.drillHist[k];
+  m.maxCombo=Math.max(m.maxCombo||0,b.maxCombo||0);m.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
+  return m;
+}
+/* claude.ai の共有データ（db）。使えないときは端末内保存だけで動く */
+const Cap={db:null,user:null,uid:null,ready:false};
+const Sync={ref:null,timer:null,busy:false,dirty:false,status:'local',
+  async init(){
+    if(!Cap.db||!Cap.uid)return;
+    try{this.ref=Cap.db.doc('data/users/'+Cap.uid+'/progress');const snap=await this.ref.get();
+      if(snap.exists){const d=snap.data();if(d&&d.p){P=mergeProgress(P,d.p);LS.set(STORE_KEY,P);}}
+      this.status='synced';this.schedule(500);render();}
+    catch(e){this.ref=null;this.status='local';}
+  },
+  schedule(delay=2000){if(!this.ref)return;this.dirty=true;clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),delay);},
+  async flush(){if(!this.ref)return;if(this.busy){this.schedule(1500);return;}this.busy=true;this.dirty=false;
+    try{await this.ref.set({p:clone(P),at:Date.now()});this.status='synced';}
+    catch(e){this.status='pending';if(e&&(e.code==='invalid_argument'||e.code==='revoked'||e.code==='not_granted')){this.ref=null;this.status='local';}else setTimeout(()=>this.schedule(0),30000);}
+    finally{this.busy=false;if(this.dirty)this.schedule();}}
+};
+async function loadRemoteConfig(){
+  if(!Cap.db)return;try{const s=await Cap.db.doc('config/game').get();if(s.exists){const d=s.data();CONFIG=deepMerge(DEFAULT_CONFIG,d);LS.set('fq.config',d);}}catch(e){}
+}
+
+/* ========== XP・レベル ========== */
+function addXP(a,src){if(a>0)P.xpEvents.push({i:rid(),a:Math.round(a),t:Date.now(),s:src});}
+function totalXP(){let s=0;for(const e of P.xpEvents)s+=e.a;return s;}
+function weekXP(){const ws=weekStart();let s=0;for(const e of P.xpEvents)if(e.t>=ws)s+=e.a;return s;}
+function levelInfo(xp=totalXP()){const L=CONFIG.level;let lv=1,need=L.base,rem=xp;while(lv<L.max&&rem>=need){rem-=need;lv++;need=L.base+L.step*(lv-1);}return{lv,cur:rem,need:lv>=L.max?0:need};}
+function starsFor(acc){const s=CONFIG.stars;return acc>=s.three?3:acc>=s.two?2:acc>=s.one?1:0;}
+function starStr(n,max=3){return `<span aria-label="★${n}つ（${max}つ中）"><span class="star-on" aria-hidden="true">${'★'.repeat(n)}</span><span class="star-off" aria-hidden="true">${'☆'.repeat(max-n)}</span></span>`;}
+
+/* ========== 解放 ========== */
+function worldUnlocked(w){if(w<=1)return true;const prevBoss=WORLDS[w-2].list[11].id;return(P.stars[prevBoss]||0)>=CONFIG.unlock.boss_stars_to_next_world;}
+function stageUnlocked(st){if(!worldUnlocked(st.world))return false;if(st.no===1)return true;const prev=WORLDS[st.world-1].list[st.no-2];return(P.stars[prev.id]||0)>=CONFIG.unlock.stars_to_next;}
+function currentWorld(){let w=1;for(let i=1;i<=WORLDS.length;i++)if(worldUnlocked(i))w=i;return w;}
+function nextStage(){const w=WORLDS[currentWorld()-1];return w.list.find(s=>stageUnlocked(s)&&!(P.stars[s.id]>0))||w.list.filter(stageUnlocked).sort((a,b)=>(P.stars[a.id]||0)-(P.stars[b.id]||0))[0];}
+
+/* ========== 練習時間・連続日数・休憩 ========== */
+function addPlay(sec){const k=dayKey();P.playLog[k]=(P.playLog[k]||0)+sec;}
+function streak(){let k=dayKey(),n=0;if(!(P.playLog[k]>0))k=addDays(k,-1);while(P.playLog[k]>0){n++;k=addDays(k,-1);}return n;}
+function restLimitMin(){const r=CONFIG.rest;const created=P.profile&&P.profile.createdAt?dayKey(P.profile.createdAt):dayKey();return daysBetween(created,dayKey())<r.first_days?r.recommend_minutes_first:r.recommend_minutes;}
+function todayMin(){return Math.floor((P.playLog[dayKey()]||0)/60);}
+function needRest(){return todayMin()>=restLimitMin();}
+
+/* ========== 苦手カード ========== */
+function weakDue(w){return w.due<=dayKey();}
+function registerWeak(stageId,bar,speed){
+  const W=CONFIG.weak,now=Date.now();const ex=P.weak.find(w=>w.stageId===stageId&&w.bar===bar);
+  if(ex){ex.due=addDays(dayKey(),W.intervals_days[0]);ex.passes=0;ex.speed=speed;ex.updatedAt=now;return'update';}
+  if(P.weak.length>=W.max_cards)return'full';
+  P.weak.push({id:rid(),stageId,bar,speed,createdAt:now,due:addDays(dayKey(),W.intervals_days[0]),passes:0,updatedAt:now});return'new';
+}
+function weakLabel(w){const st=STAGES[w.stageId];return st?`${st.world}-${st.no}「${st.t}」${w.bar}小節目`:'';}
+
+/* ========== デイリークエスト（「4. ゲームデザイン」4章） ========== */
+function ensureQuests(){
+  const today=dayKey();if(P.quests&&P.quests.day===today)return P.quests;
+  const s=Settings.get(),cw=currentWorld(),list=[];
+  const recentDrills=new Set(Object.entries(P.drillHist).filter(([,d])=>daysBetween(d,today)<7).map(([k])=>k));
+  const pickDrill=(pred)=>{const all=Object.values(DRILLS).filter(d=>d.minWorld<=cw&&pred(d)&&!list.some(q=>q.ref===d.id));const fresh=all.filter(d=>!recentDrills.has(d.id));const pool=fresh.length?fresh:all;return pool[Math.floor(prng(hashStr(today+list.length))()*pool.length)];};
+  if(s.light){for(let i=0;i<CONFIG.quest.count;i++){const d=pickDrill(x=>x.light);if(d){list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}}}
+  else{
+    const due=P.weak.filter(weakDue).sort((a,b)=>a.due<b.due?-1:1)[0];
+    const ns=nextStage();
+    if(due)list.push({kind:'weak',ref:due.id,label:'苦手カード：'+weakLabel(due),done:false});
+    else{const cand=WORLDS[cw-1].list.filter(x=>stageUnlocked(x)&&(P.stars[x.id]||0)>0&&(P.stars[x.id]||0)<3).sort((a,b)=>(P.stars[a.id]||0)-(P.stars[b.id]||0));
+      const st=cand[0];if(st)list.push({kind:'stage',ref:st.id,label:`★を増やす：${st.world}-${st.no}「${st.t}」`,done:false});
+      else{const d=pickDrill(()=>true);list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}}
+    if(ns&&!(P.stars[ns.id]>0))list.push({kind:'clear',ref:ns.id,label:`クリアする：${ns.world}-${ns.no}「${ns.t}」`,done:false});
+    else{const d=pickDrill(()=>true);list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}
+    const d=pickDrill(()=>true);if(d){list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}
+  }
+  P.quests={day:today,list:list.slice(0,CONFIG.quest.count),allBonus:false};save();return P.quests;
+}
+function questProgress(meta,stars){
+  const q=ensureQuests(),done=[];
+  for(const x of q.list){if(x.done)continue;
+    if((x.kind==='weak'&&meta.mode==='weak'&&meta.cardId===x.ref)||(x.kind==='stage'&&meta.mode==='stage'&&meta.stageId===x.ref)||(x.kind==='clear'&&meta.mode==='stage'&&meta.stageId===x.ref&&stars>=1)||(x.kind==='drill'&&meta.mode==='drill'&&meta.drillId===x.ref)){
+      x.done=true;addXP(CONFIG.xp.quest,'quest');done.push({label:x.label,xp:CONFIG.xp.quest});}}
+  if(!q.allBonus&&q.list.length&&q.list.every(x=>x.done)){q.allBonus=true;addXP(CONFIG.xp.quest_all_bonus,'quest_all');done.push({label:'3つすべて達成',xp:CONFIG.xp.quest_all_bonus});}
+  return done;
+}
+
+/* ========== 速度の自動調整 ========== */
+function updateSpeed(id,acc,used){
+  const d=CONFIG.difficulty;const r=(P.recent[id]=[...(P.recent[id]||[]),acc].slice(-d.window));let sp=used,msg='';
+  if(acc<d.down_at&&used>d.min_speed){sp=Math.max(d.min_speed,used-d.down_rate);P.recent[id]=[];msg=`次は速度${sp}%がおすすめです`;}
+  else if(r.length>=d.window&&r.every(a=>a>d.up_at)&&used<100){sp=Math.min(100,used+d.up_rate);P.recent[id]=[];msg=`安定しています。次は速度${sp}%に上げます`;}
+  P.speed[id]=sp;return msg;
+}
+
+/* ========== バッジ ========== */
+function badges(){
+  const cleared=w=>(P.stars[WORLDS[w-1].list[11].id]||0)>=1;const three=Object.values(P.stars).filter(v=>v>=3).length;const st=streak(),lv=levelInfo().lv;
+  return[
+    {b:'1',t:'はじめての★',on:Object.values(P.stars).some(v=>v>0)},
+    {b:'3日',t:'3日連続',on:st>=3},{b:'7日',t:'7日連続',on:st>=7},
+    {b:'50',t:'50コンボ',on:(P.maxCombo||0)>=50},{b:'★3',t:'★3を10ステージ',on:three>=10},{b:'Lv10',t:'レベル10',on:lv>=10},
+    ...WORLDS.map((w,i)=>({b:'W'+(i+1),t:w.name+'のボス',on:cleared(i+1)}))
+  ];
+}
+
+/* ========== リーグ（db の共有データで週ごとのXPを比べる） ========== */
+const TIERS=['ブロンズ','シルバー','ゴールド','サファイア','ルビー','エメラルド','ダイヤ'];
+const League={rows:null,loading:false,err:null,names:{},
+  allowed(){return P.profile&&P.profile.ageClass!=='child';},
+  async load(){
+    if(!Cap.db||!Cap.uid||!this.allowed())return;this.loading=true;this.err=null;
+    try{const q=await Cap.db.collection('league').limit(500).get();this.rows=q.docs.map(d=>({id:d.id,...d.data()}));
+      await this.rollover();await this.push(true);
+      const ids=this.rows.map(r=>r.id);if(Cap.user&&ids.length){const ps=await Cap.user.profiles(ids);for(const id of ids)this.names[id]=(ps&&ps[id]&&ps[id].name)||'';}}
+    catch(e){this.err='リーグを読み込めませんでした。時間をおいて開き直してください';}
+    this.loading=false;if(route.name==='league')render();
+  },
+  mine(){return this.rows&&this.rows.find(r=>r.id===Cap.uid);},
+  async rollover(){
+    const wk=weekKey(),me=this.mine();if(!me||me.week===wk)return;
+    const L=CONFIG.league,last=me.week;
+    const group=this.rows.map(r=>r.week===last?{id:r.id,xp:r.xp,tier:r.tier}:r.prevWeek===last?{id:r.id,xp:r.prevXp,tier:r.prevTier}:null).filter(x=>x&&x.tier===me.tier).sort((a,b)=>b.xp-a.xp).slice(0,L.group_size);
+    const rank=group.findIndex(g=>g.id===me.id)+1;let tier=me.tier;
+    if(rank>0&&rank<=L.promote&&me.xp>0)tier=Math.min(L.tiers-1,tier+1);else if(rank>0&&group.length>L.promote+L.demote&&rank>group.length-L.demote)tier=Math.max(0,tier-1);
+    me.prevWeek=last;me.prevXp=me.xp;me.prevTier=me.tier;me.tier=tier;me.week=wk;me.xp=0;me.moved=tier>me.prevTier?'up':tier<me.prevTier?'down':'stay';
+  },
+  async push(force){
+    if(!Cap.db||!Cap.uid||!this.allowed())return;if(!this.rows){if(!this.loading)await this.load();return;}const wk=weekKey(),xp=weekXP();let me=this.mine();
+    if(!me){me={id:Cap.uid,week:wk,xp,tier:0,prevWeek:null,prevXp:0,prevTier:0};if(this.rows)this.rows.push(me);}
+    if(!force&&me.week===wk&&me.xp===xp&&me._saved)return;me.week=wk;me.xp=xp;
+    const{id,_saved,...body}=me;try{await Cap.db.doc('league/'+Cap.uid).set({...body,at:Date.now()});me._saved=true;}catch(e){}
+  }
+};
+/* ========== プレイ画面（S08） ========== */
+const cv=$('#cv'),g2=cv.getContext('2d');
+const JUDGE_STYLE={perfect:{sym:'◆',label:'PERFECT',color:'#3DD9EB',dur:200,scale:1.2},great:{sym:'●',label:'GREAT',color:'#4CD07D',dur:180,scale:1.1},good:{sym:'▲',label:'GOOD',color:'#F5D23B',dur:150,scale:1},miss:{sym:'×',label:'MISS',color:'#8A8FA3',dur:150,scale:1}};
+const Play={
+  state:'idle',chart:null,meta:null,cfg:null,cal:null,sch:null,songStart:0,epoch:0,raf:0,countFrom:0,
+  reset(){Object.assign(this,{score:0,combo:0,maxCombo:0,counts:{perfect:0,great:0,good:0,miss:0},sumBase:0,offsets:[],effects:[],wrong:0,stray:0,playMs:0,segStart:0,comboFlash:-1e9,lastNext:'',pauseSong:0});},
+  async start(chart,meta){
+    Guide.stop();await A.resume();
+    this.chart=chart;this.meta=meta;this.cfg=clone(CONFIG);this.reset();this.epoch++;
+    const s=Settings.get();this.input=s.input;this.route=s.route;this.lefty=s.hand==='left';this.calm=!!s.calm||matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('#play').classList.add('on');document.body.style.overflow='hidden';$('#hud').classList.toggle('lefty',this.lefty);
+    $('#hPause').innerHTML=ICON.pause;this.resize();this.updateHUD();$('#hNext').innerHTML='';
+    if(this.input==='mic'){const ok=await Mic.start();if(!ok){this.input='tap';toast((Mic.error||'マイクを使えません')+'。画面タップで判定します');}}
+    this.cal=getCalib();if(this.input==='tap'&&Settings.get().input==='mic'){this.cal=LS.get('fq.calib',{})[s.route+'|tap']||{offset:Math.round(((A.ctx.outputLatency||0)+(A.ctx.baseLatency||0))*1000),std:null,assumed:true};}
+    if(this.input==='mic'){Mic.listeners.add(this._on||(this._on=ev=>this.onOnset(ev)));this.state='prepare';this.overlay('prepare');await Mic.measureAmbient(2000);if(this.state!=='prepare')return;}
+    this.state='waiting';this.overlay('waiting');this.loop();
+  },
+  begin(){
+    if(this.state!=='waiting')return;this.overlay(null);
+    this.events=A.backingEvents(this.chart,Settings.get().click);this.songStart=A.ctx.currentTime+0.15;this.countFrom=this.chart.barMs;
+    this.sch=new Scheduler(this.events,this.songStart,0);this.sch.run();this.state='playing';this.segStart=performance.now();
+  },
+  songNow(){return(A.ctx.currentTime-this.songStart)*1000;},
+  onOnset(ev){if(this.state==='waiting'){this.begin();return;}if(this.state!=='playing')return;this.hit((ev.time-this.songStart)*1000-this.cal.offset,ev);},
+  onTap(e){if(this.state==='waiting'){this.begin();return;}if(this.state!=='playing'||this.input!=='tap')return;this.hit((A.eventCtxTime(e)-this.songStart)*1000-this.cal.offset,null);},
+  hit(t,ev){
+    const good=this.cfg.judge.good_ms;let best=null,bd=1e9;
+    for(const n of this.chart.notes){if(n.t>t+good)break;if(n.judged||n.claimed)continue;const d=Math.abs(t-n.t);if(d<=good&&d<bd){bd=d;best=n;}}
+    if(!best){this.stray++;return;}
+    if(!ev||best.type==='mute'){this.judge(best,t-best.t);return;}
+    best.claimed=true;const ep=this.epoch;
+    Mic.checkNote(ev,best,ok=>{if(ep!==this.epoch)return;best.claimed=false;if(best.judged)return;if(ok)this.judge(best,t-best.t);else best.wrong=(best.wrong||0)+1;});
+  },
+  judge(n,off){
+    const J=this.cfg.judge;let g='miss';
+    if(off!=null){const a=Math.abs(off);g=a<=J.perfect_ms?'perfect':a<=J.great_ms?'great':a<=J.good_ms?'good':'miss';}
+    if(g==='perfect'&&this.route==='bluetooth'&&this.cal.std!=null&&this.cal.std>this.cfg.calib.bt_perfect_std_ms)g='great';
+    n.judged=g;n.off=off;n.jt=performance.now();
+    const base=this.cfg.score[g];this.sumBase+=base;this.counts[g]++;
+    if(g==='miss'){this.combo=0;if(n.wrong)this.wrong++;}else{this.combo++;this.maxCombo=Math.max(this.maxCombo,this.combo);this.offsets.push(off);}
+    const C=this.cfg.combo;const mult=Math.min(1+C.step_rate*Math.floor(this.combo/C.step_notes),C.max_mult);this.score+=base*mult;
+    if(this.combo>0&&this.combo%C.step_notes===0)this.comboFlash=performance.now();
+    this.effects.push({n,g,t0:performance.now()});this.updateHUD();
+  },
+  accNow(){const n=this.counts.perfect+this.counts.great+this.counts.good+this.counts.miss;return n?this.sumBase/(100*n)*100:null;},
+  updateHUD(){$('#hScore').textContent=Math.round(this.score||0).toLocaleString();$('#hCombo').textContent=this.combo||0;const a=this.accNow();$('#hAcc').textContent=a==null?'–':a.toFixed(0)+'%';},
+  pause(reason){
+    if(this.state!=='playing')return;this.state='paused';this.pauseSong=this.songNow();this.sch.stop();this.epoch++;
+    for(const n of this.chart.notes)n.claimed=false;this.playMs+=performance.now()-this.segStart;this.overlay('paused',reason);
+  },
+  resume(){
+    if(this.state!=='paused')return;const{barMs,beatMs}=this.chart;let from=0;
+    if(this.pauseSong>=barMs)from=Math.max(barMs,Math.floor(this.pauseSong/barMs)*barMs-2*barMs);
+    let ev;if(from===0){ev=this.events;this.songStart=A.ctx.currentTime+0.15;this.countFrom=barMs;}
+    else{const clicks=[0,1,2,3].map(k=>({t:from-barMs+k*beatMs,k:'click',acc:k===0}));ev=[...clicks,...this.events.filter(e=>e.t>=from&&!(e.k==='click'&&!e.soft))].sort((a,b)=>a.t-b.t);
+      this.songStart=A.ctx.currentTime+0.15-(from-barMs)/1000;this.countFrom=from;}
+    this.sch=new Scheduler(ev,this.songStart,from===0?0:from-barMs);this.sch.run();this.overlay(null);this.state='playing';this.segStart=performance.now();
+  },
+  stopAll(){cancelAnimationFrame(this.raf);if(this.sch)this.sch.stop();if(this._on)Mic.listeners.delete(this._on);this.epoch++;$('#play').classList.remove('on');document.body.style.overflow='';this.overlay(null);},
+  quit(){this.state='idle';this.stopAll();go(this.meta.back||'map');},
+  retry(){const m=this.meta;this.state='idle';this.stopAll();this.start(m.rebuild(),m);},
+  finish(){
+    if(this.state!=='playing')return;this.state='result';this.playMs+=performance.now()-this.segStart;
+    setTimeout(()=>{if(this.sch)this.sch.stop();},1500);cancelAnimationFrame(this.raf);if(this._on)Mic.listeners.delete(this._on);
+    $('#play').classList.remove('on');document.body.style.overflow='';
+    const res=applyResult(this);go('result',{res});
+  },
+  overlay(kind,reason){
+    const o=$('#pOverlay'),p=$('#pPanel');if(!kind){o.classList.remove('on');return;}o.classList.add('on');
+    const t=esc(this.meta.title);
+    if(kind==='prepare')p.innerHTML=`<h2>${t}</h2><p>まわりの音を2秒測っています。弾かずに待ってください。</p><div class="level"><i id="lvl"></i></div>`;
+    if(kind==='waiting'){const mic=this.input==='mic';p.innerHTML=`<h2>${t}</h2><p>${mic?'開放6弦を鳴らすか、スタートを押すと始まります。':'ノーツが線に重なったら画面をタップします（スペースキーでも可）。'}</p>${mic?'<div class="level" style="margin-bottom:16px"><i id="lvl"></i></div>':''}
+      <div class="stack"><button class="btn primary block" data-act="pBegin">スタート</button><button class="btn block" data-act="pQuit">やめる</button></div>
+      <p class="small" style="margin:12px 0 0">速度 ${this.chart.speed}%・${Math.round(this.chart.bpm)} BPM・${this.input==='mic'?'マイク判定':'タップ判定'}${this.cal.assumed?'・遅延は推定値':''}</p>`;}
+    if(kind==='paused')p.innerHTML=`<h2>一時停止</h2><p>${esc(reason||'一時停止中です')}</p><p class="small">再開すると2小節前から始まります。</p>
+      <div class="stack"><button class="btn primary block" data-act="pResume">再開する</button><button class="btn block" data-act="pRetry">はじめからやり直す</button><button class="btn block" data-act="pQuit">やめる（記録しない）</button></div>`;
+  },
+  resize(){const dpr=Math.min(2,window.devicePixelRatio||1);const w=cv.clientWidth||innerWidth,h=cv.clientHeight||innerHeight;cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);g2.setTransform(dpr,0,0,dpr,0,0);this.W=w;this.H=h;$('#rotHint').style.display=h>w?'block':'none';},
+  loop(){
+    const step=()=>{this.raf=requestAnimationFrame(step);
+      const lv=$('#lvl');if(lv)lv.style.width=clamp((Mic.level()+70)/60*100,0,100)+'%';
+      if(this.state==='playing'){
+        const nowJ=this.songNow()-this.cal.offset-90,good=this.cfg.judge.good_ms;
+        for(const n of this.chart.notes){if(n.t+good>nowJ)break;if(!n.judged&&!n.claimed)this.judge(n,null);}
+        if(this.songNow()>this.chart.endMs&&this.chart.notes.every(n=>n.judged)){this.finish();return;}
+      }
+      this.draw();};
+    cancelAnimationFrame(this.raf);this.raf=requestAnimationFrame(step);
+  },
+  nextInfo(now){
+    const n=this.chart.notes.find(x=>x.t>now-40&&!x.judged);if(!n)return null;
+    if(n.type==='chord'||n.type==='mute')return{key:'c'+n.chord,chord:n.chord};
+    if(n.chord)return{key:'c'+n.chord,chord:n.chord,sub:`${n.string}弦 ${n.fret===0?'開放':n.fret+'フレット'}`};
+    return{key:'s'+n.string+'_'+n.fret,txt:`${n.string}弦`,sub:n.fret===0?'開放':n.fret+'フレット'};
+  },
+  draw(){
+    const W=this.W,H=this.H,g=g2;if(!W)return;
+    const vis=this.state==='playing'||this.state==='paused'||this.state==='result'?(this.state==='paused'?this.pauseSong:(A.heardTime()-this.songStart)*1000):-this.chart.barMs;
+    g.fillStyle='#12141C';g.fillRect(0,0,W,H);
+    const tint=WORLDS[(this.chart.world||1)-1].tint;const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,tint+'33');gr.addColorStop(1,'#12141C00');g.fillStyle=gr;g.fillRect(0,0,W,H);
+    const top=Math.min(96,Math.max(70,H*0.17)),bottom=H-Math.max(22,H*0.06),laneH=(bottom-top)/6,L=this.lefty;
+    const hitX=L?W*0.84:W*0.16,dir=L?-1:1,LOOK=2400,ppm=(W*0.76)/LOOK;
+    const y=s=>top+(L?(6-s):(s-1))*laneH+laneH/2,xOf=t=>hitX+dir*(t-vis)*ppm;
+    const{beatMs,barMs}=this.chart;
+    // 拍と小節の線
+    const b0=Math.floor((vis-400)/beatMs),b1=Math.ceil((vis+LOOK)/beatMs);
+    for(let b=b0;b<=b1;b++){const x=xOf(b*beatMs);if(x<0||x>W)continue;const isBar=b%4===0;g.strokeStyle=isBar?'rgba(242,242,245,.18)':'rgba(242,242,245,.06)';g.lineWidth=isBar?2:1;g.beginPath();g.moveTo(x,top);g.lineTo(x,bottom);g.stroke();}
+    // 弦
+    for(let s=1;s<=6;s++){g.strokeStyle=STRING_COLORS[s]+'88';g.lineWidth=1+(s-1)*0.45;g.beginPath();g.moveTo(0,y(s));g.lineTo(W,y(s));g.stroke();
+      g.fillStyle=STRING_COLORS[s];g.font='700 12px "Noto Sans JP",sans-serif';g.textAlign=L?'right':'left';g.textBaseline='middle';g.fillText(String(s),L?W-6:6,y(s)-laneH*0.32);}
+    // 判定ライン
+    g.fillStyle='rgba(242,242,245,.9)';g.fillRect(hitX-2,top-6,4,bottom-top+12);
+    for(let s=1;s<=6;s++){g.strokeStyle=STRING_COLORS[s];g.lineWidth=2;g.beginPath();g.arc(hitX,y(s),Math.min(16,laneH*0.36),0,Math.PI*2);g.stroke();}
+    // 空ピッキングの目安
+    g.textAlign='center';g.textBaseline='middle';
+    for(const gh of this.chart.ghosts){if(gh.t<vis-200||gh.t>vis+LOOK)continue;const x=xOf(gh.t);g.fillStyle='rgba(242,242,245,.22)';g.font='700 20px "Noto Sans JP",sans-serif';g.fillText(gh.dir==='down'?'↓':'↑',x,top+laneH*3);}
+    // ノーツ
+    const nw=Math.max(34,Math.min(46,laneH*1.1)),nh=Math.min(laneH*0.78,40),now=performance.now();
+    for(const n of this.chart.notes){
+      if(n.t<vis-400)continue;if(n.t>vis+LOOK)break;
+      let alpha=1,gray=false;if(n.judged){if(n.judged!=='miss')continue;const el=now-n.jt;if(el>150)continue;alpha=1-el/150;gray=true;}
+      const x=xOf(n.t);g.globalAlpha=alpha;
+      if(n.type==='single'){const cy=y(n.string);rr(g,x-nw/2,cy-nh/2,nw,nh,10);g.fillStyle=gray?'#8A8FA3':STRING_COLORS[n.string];g.fill();
+        g.fillStyle='#12141C';g.font=`900 ${Math.round(nh*0.55)}px "Noto Sans JP",sans-serif`;g.fillText(String(n.fret),x,cy+1);
+        if(n.tech){g.fillStyle='#F2F2F5';g.font='700 12px "Noto Sans JP",sans-serif';g.fillText(n.tech==='bend'?'チョーク↑':'→'+n.to,x,cy-nh/2-9);}}
+      else if(n.type==='chord'){const ys=n.strings.map(y),y0=Math.min(...ys),y1=Math.max(...ys);
+        rr(g,x-nw*0.45,y0-nh*0.5,nw*0.9,y1-y0+nh,12);g.fillStyle=gray?'rgba(138,143,163,.35)':'rgba(242,242,245,.12)';g.fill();g.strokeStyle=gray?'#8A8FA3':'rgba(242,242,245,.55)';g.lineWidth=2;g.stroke();
+        for(const s of n.strings){g.beginPath();g.arc(x,y(s),Math.min(nh*0.34,11),0,Math.PI*2);g.fillStyle=gray?'#8A8FA3':STRING_COLORS[s];g.fill();}
+        g.fillStyle='rgba(242,242,245,.5)';g.font='700 13px "Noto Sans JP",sans-serif';for(const s of n.mute)g.fillText('×',x,y(s));
+        g.fillStyle='#F2F2F5';g.font='900 14px "Noto Sans JP",sans-serif';g.fillText(n.chord,x,bottom+Math.min(12,(H-bottom)/2-1));
+        g.font='900 18px "Noto Sans JP",sans-serif';g.fillText(n.strum==='up'?'↑':'↓',x-dir*(nw*0.45+12),(y0+y1)/2);}
+      else{rr(g,x-nw*0.3,top+4,nw*0.6,bottom-top-8,10);g.fillStyle=gray?'rgba(138,143,163,.5)':'rgba(160,164,184,.45)';g.fill();g.fillStyle='#F2F2F5';g.font='900 18px "Noto Sans JP",sans-serif';g.fillText('×',x,top+laneH*3);g.font='700 11px "Noto Sans JP",sans-serif';g.fillText('ミュート',x,bottom+Math.min(12,(H-bottom)/2-1));}
+      g.globalAlpha=1;
+    }
+    // 判定エフェクト（次のノーツに重ねないよう、判定ラインの手前側に出す）
+    this.effects=this.effects.filter(e=>now-e.t0<JUDGE_STYLE[e.g].dur);
+    for(const e of this.effects){const st=JUDGE_STYLE[e.g],p=(now-e.t0)/st.dur,sc=this.calm?1:1+(st.scale-1)*p;const n=e.n;
+      const ey=n.type==='single'?y(n.string):n.type==='chord'?(Math.min(...n.strings.map(y))+Math.max(...n.strings.map(y)))/2:top+laneH*3;const ex=hitX-dir*48;
+      g.save();g.translate(ex,ey);g.scale(sc,sc);g.globalAlpha=e.g==='good'||e.g==='miss'?1-p*0.6:1-p*0.8;g.fillStyle=st.color;g.font='900 26px "Noto Sans JP",sans-serif';g.fillText(st.sym,0,-12);g.font='900 15px "Noto Sans JP",sans-serif';g.fillText(st.label,0,12);g.restore();}
+    g.globalAlpha=1;
+    // コンボの強調（200ms）
+    if(now-this.comboFlash<200&&this.combo>0){const p=(now-this.comboFlash)/200;g.save();g.translate(W/2,top+laneH*1.2);if(!this.calm)g.scale(1+0.15*(1-p),1+0.15*(1-p));g.fillStyle='#FFB020';g.font='900 30px "Noto Sans JP",sans-serif';g.fillText(this.combo+' コンボ',0,0);g.restore();}
+    // カウントイン
+    if((this.state==='playing'||this.state==='paused')&&vis<this.countFrom&&vis>this.countFrom-barMs){const k=4-Math.floor((vis-(this.countFrom-barMs))/beatMs);if(k>=1&&k<=4){g.fillStyle='rgba(242,242,245,.9)';g.font='900 72px "Noto Sans JP",sans-serif';g.fillText(String(k),W/2,(top+bottom)/2);}}
+    // 進行バー
+    const prog=clamp(vis/this.chart.endMs,0,1);g.fillStyle='rgba(242,242,245,.12)';g.fillRect(0,H-4,W,4);g.fillStyle='#FFB020';g.fillRect(L?W*(1-prog):0,H-4,W*prog,4);
+    // 次のコード表示
+    const ni=this.nextInfo(vis);const key=ni?ni.key:'';if(key!==this.lastNext){this.lastNext=key;const el=$('#hNext');
+      if(!ni)el.innerHTML='';else if(ni.chord)el.innerHTML=`<div class="lab">次<br>${esc(ni.sub||'')}</div><div class="cn">${esc(ni.chord)}</div>${chordSVG(ni.chord,56,this.lefty,true)}`;
+      else el.innerHTML=`<div class="lab">次</div><div class="cn">${esc(ni.txt)}</div><div class="lab" style="text-align:left">${esc(ni.sub)}</div>`;}
+  }
+};
+function rr(g,x,y,w,h,r){r=Math.min(r,w/2,h/2);g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+cv.addEventListener('pointerdown',e=>{if(Play.state==='playing'||Play.state==='waiting'){if(Play.state==='waiting'&&Play.input==='mic')return;Play.onTap(e);}});
+window.addEventListener('keydown',e=>{if(!$('#play').classList.contains('on'))return;
+  if(e.code==='Space'||e.code==='KeyJ'||e.code==='KeyF'){e.preventDefault();if(Play.state==='waiting')Play.begin();else if(Play.input==='tap')Play.onTap(e);}
+  if(e.code==='Escape'){if(Play.state==='playing')Play.pause('一時停止中です');else if(Play.state==='paused')Play.resume();}});
+window.addEventListener('resize',()=>{if($('#play').classList.contains('on'))Play.resize();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(Play.state==='playing')Play.pause('アプリが背景に移ったため一時停止しました');Guide.stop();Metro.stop();}});
+$('#hPause').addEventListener('click',()=>Play.pause('一時停止中です'));
+
+/* ========== 結果の反映（★・XP・苦手を保存） ========== */
+function applyResult(pl){
+  const ch=pl.chart,meta=pl.meta,cfg=pl.cfg,N=ch.notes.length||1;
+  const acc=pl.sumBase/(100*N)*100,stars=starsFor(acc);
+  const hits=pl.offsets,avg=hits.length?hits.reduce((a,b)=>a+b,0)/hits.length:0;
+  const sec=Math.round(pl.playMs/1000);const before=levelInfo();const xp=[];
+  const playXP=Math.round(sec/60*cfg.xp.per_minute);if(playXP>0){addXP(playXP,'play');xp.push({label:sec<60?`練習 ${sec}秒`:`練習 ${Math.floor(sec/60)}分${sec%60?sec%60+'秒':''}`,xp:playXP});}
+  const res={meta,acc,stars,score:Math.round(pl.score),counts:{...pl.counts},avg,offsets:hits.slice(),maxCombo:pl.maxCombo,wrong:pl.wrong,sec,speed:ch.speed,xp,weakBars:[],msgs:[]};
+  // 小節ごとの正確さ
+  const byBar={};for(const n of ch.notes){const b=byBar[n.bar]||(byBar[n.bar]={sum:0,n:0});b.sum+=cfg.score[n.judged||'miss'];b.n++;}
+  res.bars=Object.entries(byBar).map(([b,v])=>({bar:+b,acc:v.sum/(100*v.n)*100}));
+  if(meta.mode==='stage'){
+    const id=meta.stageId,prev=P.stars[id]||0;res.prevStars=prev;res.prevBest=P.best[id]||0;
+    if(stars>prev){for(let k=prev+1;k<=stars;k++){const b=cfg.xp.first_star_bonus[k-1];addXP(b,'star');xp.push({label:`はじめての★${k}`,xp:b});}P.stars[id]=stars;}
+    if(res.score>(P.best[id]||0))P.best[id]=res.score;
+    for(const b of res.bars)if(b.acc<cfg.weak.register_below){const r=registerWeak(id,b.bar,ch.speed);if(r!=='full')res.weakBars.push(b.bar);else res.weakFull=true;}
+    const m=updateSpeed(id,acc,ch.speed);if(m)res.msgs.push(m);
+    const st=STAGES[id];res.unlockedNext=stars>=1&&prev<1&&st.no<12;res.worldUnlocked=st.boss&&stars>=cfg.unlock.boss_stars_to_next_world&&prev<cfg.unlock.boss_stars_to_next_world&&st.world<WORLDS.length;
+  }else if(meta.mode==='weak'){
+    const card=P.weak.find(w=>w.id===meta.cardId);
+    if(card){const W=cfg.weak;if(weakDue(card)){if(acc>=W.graduate_accuracy){card.passes++;if(card.passes>=W.graduate_passes){P.weak=P.weak.filter(w=>w.id!==card.id);P.weakDone[card.id]=Date.now();addXP(cfg.xp.weak_card_cleared,'weak');xp.push({label:'苦手カード卒業',xp:cfg.xp.weak_card_cleared});res.graduated=true;}
+          else{card.due=addDays(dayKey(),W.intervals_days[Math.min(card.passes,W.intervals_days.length-1)]);res.msgs.push(`合格です（${card.passes}/${W.graduate_passes}）。次の出題は${fmtDay(card.due)}です`);}}
+        else{card.passes=0;card.due=addDays(dayKey(),W.intervals_days[0]);res.msgs.push(`正確さ${W.graduate_accuracy}%で合格です。明日もう一度出題します`);}card.updatedAt=Date.now();}
+      else res.msgs.push(`出題日（${fmtDay(card.due)}）になると合格が記録されます`);}
+  }
+  xp.push(...questProgress(meta,stars));
+  P.maxCombo=Math.max(P.maxCombo||0,pl.maxCombo);addPlay(sec);
+  P.history.push({id:rid(),t:Date.now(),mode:meta.mode,ref:meta.stageId||meta.drillId||meta.cardId,acc:Math.round(acc*10)/10,score:res.score,sec,speed:ch.speed});P.history=P.history.slice(-100);
+  const log=LS.get('fq.judgelog',{});const k=dayKey();log[k]=[...(log[k]||[]),...hits.map(Math.round)].slice(-600);for(const d of Object.keys(log))if(daysBetween(d,k)>30)delete log[d];LS.set('fq.judgelog',log);
+  save();const after=levelInfo();res.levelUp=after.lv>before.lv?after.lv:0;res.xpTotal=xp.reduce((a,b)=>a+b.xp,0);
+  League.push();return res;
+}
+
+/* ========== 遅延キャリブレーション（S04） ========== */
+const Calib={phase:'idle',hits:[],clicks:[],result:null,err:null,timer:null,
+  async run(){
+    this.stop();this.err=null;this.result=null;this.hits=[];await A.resume();const s=Settings.get();
+    if(s.input==='mic'){const ok=await Mic.start();if(!ok){this.err=(Mic.error||'マイクを使えません')+'。設定で「タップ」に切り替えると、マイクなしで遊べます。';this.phase='idle';render();return;}
+      this.phase='measuring';render();await Mic.measureAmbient(1200);Mic.listeners.add(this._on||(this._on=ev=>{if(this.phase==='running')this.hits.push(ev.time);}));}
+    const C=CONFIG.calib,c=A.ctx,T0=c.currentTime+1.0;this.clicks=[];for(let i=0;i<C.clicks;i++){const t=T0+i*C.interval_ms/1000;this.clicks.push(t);A.click(t,false);}
+    this.phase='running';render();
+    this.timer=setInterval(()=>{this.paint();if(c.currentTime>this.clicks[this.clicks.length-1]+0.6){this.finish();}},50);
+  },
+  tap(e){if(this.phase==='running'&&Settings.get().input==='tap')this.hits.push(A.eventCtxTime(e));},
+  paint(){const dots=document.querySelectorAll('.calib-dots i');const now=A.ctx.currentTime;this.clicks.forEach((t,i)=>{const d=dots[i];if(!d)return;if(now>=t)d.classList.add('tick');if(this.match(t)!=null)d.classList.add('hit');});const lv=$('#calLvl');if(lv)lv.style.width=clamp((Mic.level()+70)/60*100,0,100)+'%';},
+  match(t){let best=null,bd=1e9;for(const h of this.hits){const d=h-t;if(d>-0.2&&d<0.45&&Math.abs(d-0.05)<bd){bd=Math.abs(d-0.05);best=d;}}return best;},
+  finish(){
+    clearInterval(this.timer);if(this._on)Mic.listeners.delete(this._on);
+    const diffs=this.clicks.map(t=>this.match(t)).filter(d=>d!=null).map(d=>d*1000);
+    if(diffs.length<this.clicks.length){this.phase='idle';this.err=`${this.clicks.length}回のうち${diffs.length}回しか${Settings.get().input==='mic'?'音を検出':'タップを記録'}できませんでした。もう一度クリックに合わせて${Settings.get().input==='mic'?'開放6弦を弾いて':'タップして'}ください。`;render();return;}
+    const s=diffs.sort((a,b)=>a-b).slice(1,-1);const med=(s[2]+s[3])/2;const mean=s.reduce((a,b)=>a+b,0)/s.length;const std=Math.sqrt(s.reduce((a,b)=>a+(b-mean)**2,0)/s.length);
+    this.result={offset:Math.round(med),std:Math.round(std*10)/10,at:Date.now()};this.phase='done';render();
+  },
+  accept(){if(this.result)saveCalib(this.result);this.phase='idle';},
+  stop(){clearInterval(this.timer);if(this._on)Mic.listeners.delete(this._on);this.phase='idle';}
+};
+/* ========== アイコン・小物 ========== */
+const IP={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',map:'<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>',cards:'<rect x="4" y="7" width="12" height="14" rx="2"/><path d="M8 3h10a2 2 0 0 1 2 2v12"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4a3 3 0 0 0 4 4M16 6h4a3 3 0 0 1-4 4M12 13v4M8 21h8M10 17h4v4h-4z"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',tools:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/>',
+  pause:'<path d="M8 5v14M16 5v14"/>',play:'<path d="M7 4l13 8-13 8z"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',check:'<path d="M5 12l5 5 9-10"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',crown:'<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>',
+  sound:'<path d="M4 9h4l5-4v14l-5-4H4zM17 8a5 5 0 0 1 0 8"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',flag:'<path d="M5 21V4h11l-2 4 2 4H5"/>',rest:'<path d="M3 13h14a4 4 0 0 1 0 8H3zM17 15h1a2 2 0 0 0 0-4h-1M7 3v4M11 3v4"/>'};
+const ic=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IP[n]}</svg>`;
+const ICON=new Proxy({},{get:(_,k)=>ic(k)});
+function stringsStripe(w=96){return `<span class="strings" style="width:${w}px" aria-hidden="true">${[1,2,3,4,5,6].map(s=>`<i style="background:var(--s${s});opacity:${.55+s*.07}"></i>`).join('')}</span>`;}
+function chordSVG(name,size=88,lefty=false){
+  const sh=SHAPES[name];if(!sh)return'';const fr=sh.filter(f=>f>0);const maxF=fr.length?Math.max(...fr):1,minF=fr.length?Math.min(...fr):1;const base=maxF<=4?1:minF;
+  const w=size,h=Math.round(size*1.2),px=w*0.17,top=h*0.2,gw=w-px*2,gh=h-top-h*0.05;const xs=s=>px+gw*(lefty?(s-1):(6-s))/5;
+  let o=`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(name)}の押さえ方">`;
+  for(let f=0;f<=4;f++){const yy=top+gh*f/4;o+=`<line x1="${px}" x2="${px+gw}" y1="${yy}" y2="${yy}" stroke="var(--sub)" stroke-width="${f===0&&base===1?3:1}"/>`;}
+  for(let s=1;s<=6;s++){o+=`<line x1="${xs(s)}" x2="${xs(s)}" y1="${top}" y2="${top+gh}" stroke="var(--sub)" stroke-width="1"/>`;const f=sh[s-1];
+    if(f<0)o+=`<text x="${xs(s)}" y="${top-4}" text-anchor="middle" font-size="${Math.round(w*0.13)}" fill="var(--sub)">×</text>`;
+    else if(f===0)o+=`<circle cx="${xs(s)}" cy="${top-h*0.08}" r="${w*0.045}" fill="none" stroke="var(--sub)" stroke-width="1.5"/>`;
+    else o+=`<circle cx="${xs(s)}" cy="${top+gh*((f-base)+0.5)/4}" r="${w*0.07}" fill="var(--s${s})"/>`;}
+  if(base>1)o+=`<text x="${lefty?px+gw+3:px-3}" y="${top+gh/8+4}" text-anchor="${lefty?'start':'end'}" font-size="${Math.round(w*0.12)}" fill="var(--sub)">${base}</text>`;
+  return o+'</svg>';
+}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),3200);}
+function modal(html){$('#sheet').innerHTML=html;$('#modal').classList.add('on');const f=$('#sheet button,#sheet input,#sheet textarea');if(f)f.focus();}
+function closeModal(){$('#modal').classList.remove('on');}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+function backBar(to,title,params=''){return `<div class="top"><button class="iconbtn" data-act="go" data-to="${to}" ${params} aria-label="戻る">${ICON.back}</button><div class="grow"><h1>${esc(title)}</h1></div></div>`;}
+function stageTitle(st){return `${st.world}-${st.boss?'ボス':st.no}「${st.t}」`;}
+function stageLenSec(st,speed=100){const ch=buildChart(st,speed);return Math.round(ch.endMs/1000);}
+
+/* ========== 画面の切り替え ========== */
+let route={name:'home'};const OB={};
+function go(name,params={}){Guide.stop();if(route.name==='tools'&&name!=='tools'){Metro.stop();Tuner.stop();}if(Calib.phase!=='idle'&&name!==route.name)Calib.stop();route={name,...params};render();window.scrollTo(0,0);}
+function render(){
+  if(!(P.profile&&P.profile.onboarded)&&!/^ob/.test(route.name))route={name:'ob1'};
+  const V={ob1:vOb1,ob2:vOb2,ob3:vOb3,ob4:vOb4,home:vHome,map:vMap,stage:vStage,result:vResult,weak:vWeak,league:vLeague,my:vMy,tools:vTools,settings:vSettings,calib:vCalib}[route.name]||vHome;
+  $('#view').innerHTML=V();
+  const showTabs=!/^ob/.test(route.name);$('#tabs').style.display=showTabs?'':'none';
+  if(showTabs){const child=P.profile&&P.profile.ageClass==='child';
+    const tabs=[['home','ホーム','home'],['map','マップ','map'],['weak','苦手','cards'],child?['tools','ツール','tools']:['league','リーグ','trophy'],['my','マイページ','user']];
+    const cur={stage:'map',result:'map',settings:'my',calib:'my'}[route.name]||route.name;
+    $('#tabsIn').innerHTML=tabs.map(([k,l,i])=>`<button data-act="go" data-to="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}<span>${l}</span></button>`).join('');}
+  if(route.name==='tools')Tuner.bind();
+}
+
+/* ---------- S01〜S04 初回案内 ---------- */
+function steps(n){return `<div class="steps" aria-label="4つのうち${n}つ目">${[1,2,3,4].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>`;}
+function chipSet(k,opts,cur,act='obSet'){return `<div class="chips" role="group">${opts.map(([v,l])=>`<button class="chip" data-act="${act}" data-k="${k}" data-v="${v}" aria-pressed="${cur===v}">${l}</button>`).join('')}</div>`;}
+function vOb1(){const ok=OB.guitar&&OB.hand&&OB.exp;return `<div class="ob">${steps(1)}<div class="logo">FretQuest${stringsStripe(120)}</div>
+  <h1>はじめに3つ教えてください</h1><p class="sub">弾いた音をマイクで判定しながら、ステージを進めてギターを覚えるアプリです。</p>
+  <div class="section">ギターの種類</div>${chipSet('guitar',[['acoustic','アコースティック'],['electric','エレキ'],['classic','クラシック']],OB.guitar)}
+  <div class="section">ピックを持つ手</div>${chipSet('hand',[['right','右手'],['left','左手']],OB.hand)}
+  <div class="section">ギターの経験</div>${chipSet('exp',[['none','はじめて'],['little','少し弾ける'],['chords','コードは弾ける']],OB.exp)}
+  <div class="grow"></div><button class="btn primary block" data-act="go" data-to="ob2" ${ok?'':'disabled'}>次へ</button></div>`;}
+function vOb2(){const y=new Date().getFullYear();const ys=[];for(let i=y-4;i>=1930;i--)ys.push(i);const ok=OB.by&&OB.bm;
+  return `<div class="ob">${steps(2)}<h1>生まれた年と月</h1><p class="sub">年齢に合わせて表示する機能を決めます。13歳未満の方には、ほかの人と順位を比べるリーグを表示しません。</p>
+  <div class="row"><select class="btn" style="flex:1" data-act="obSel" data-k="by" aria-label="生まれた年"><option value="">年</option>${ys.map(v=>`<option ${OB.by==v?'selected':''}>${v}</option>`).join('')}</select>
+  <select class="btn" style="flex:1" data-act="obSel" data-k="bm" aria-label="生まれた月"><option value="">月</option>${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${OB.bm==i+1?'selected':''}>${i+1}月</option>`).join('')}</select></div>
+  <div class="grow"></div><div class="row"><button class="btn" data-act="go" data-to="ob1">戻る</button><button class="btn primary" style="flex:1" data-act="go" data-to="ob3" ${ok?'':'disabled'}>次へ</button></div></div>`;}
+function vOb3(){const pre=Mic.support();if(pre&&!Mic.error)Mic.fail(pre);const blocked=!!pre;return `<div class="ob">${steps(3)}<div class="banner" style="background:transparent;padding:0">${ICON.mic}</div><h1>マイクを使って判定します</h1>
+  <p>弾いた音の<b>タイミング</b>と<b>音の高さ</b>をマイクで聞き取り、ノーツごとに判定します。</p>
+  <p class="sub">音声はこの端末の中だけで処理し、録音や送信はしません。伴奏の音を拾わないよう、イヤホンでのプレイをおすすめします。</p>
+  ${Mic.error?`<div class="banner"><div><b>${esc(Mic.error)}</b>${esc(Mic.hint)}${blocked?'':'許可できない場合は、マイクなしでも始められます。'}</div></div>`:''}
+  <div class="grow"></div><div class="stack">${blocked?'':`<button class="btn primary block" data-act="obMic">${ICON.mic}マイクを許可する</button>`}<button class="btn ${blocked?'primary':''} block" data-act="obTap">マイクなしで始める（画面タップで判定）</button><button class="btn ghost block" data-act="go" data-to="ob2">戻る</button></div></div>`;}
+function vOb4(){return `<div class="ob">${steps(4)}<h1>遅延を合わせます</h1><p class="sub">端末や出力経路によって、音が聞こえるまでの時間が違います。最初に一度だけ測ってください。</p>${calibBlock()}
+  <div class="grow"></div><div class="stack">${Calib.phase==='done'?'':''}<button class="btn ghost block" data-act="obFinish">あとで測る（推定値で始める）</button></div></div>`;}
+function calibBlock(){
+  const s=Settings.get(),mic=s.input==='mic',cur=LS.get('fq.calib',{})[calibKey()],R=Calib.result;
+  const dots=[...Array(CONFIG.calib.clicks)].map((_,i)=>{if(Calib.phase!=='done'||!Calib.clicks[i])return'<i></i>';return `<i class="tick ${Calib.match(Calib.clicks[i])!=null?'hit':''}"></i>`;}).join('');
+  let body='';
+  if(Calib.phase==='idle')body=`${Calib.err?`<div class="banner" style="margin-bottom:12px"><div>${esc(Calib.err)}</div></div>`:''}<button class="btn primary block" data-act="calibRun">${ICON.play}はじめる</button>`;
+  if(Calib.phase==='measuring')body=`<p class="sub" style="text-align:center">まわりの音を測っています。弾かずに待ってください。</p>`;
+  if(Calib.phase==='running')body=`<p style="text-align:center;font-weight:700">${mic?'クリックに合わせて開放6弦を弾いてください':'クリックに合わせて下の枠をタップしてください'}</p>`;
+  if(Calib.phase==='done'){const bad=R.std>CONFIG.calib.max_std_ms;body=`<div class="kv"><span>補正値</span><b class="num">${R.offset} ms</b></div><div class="kv"><span>ばらつき</span><b class="num">${R.std} ms</b></div>
+    ${bad?`<div class="banner" style="margin:8px 0"><div><b>ばらつきが${CONFIG.calib.max_std_ms}msを超えています</b>判定がずれやすくなります。もう一度測ってください。</div></div>`:''}
+    <div class="stack" style="margin-top:8px"><button class="btn ${bad?'':'primary'} block" data-act="calibAccept">この値を使う</button><button class="btn ${bad?'primary':''} block" data-act="calibRun">もう一度測る</button></div>`;}
+  return `<div class="card"><div class="section" style="margin-top:0">音を聞く方法</div>${chipSet('route',Object.entries(ROUTES),s.route,'setRoute')}
+    <p class="sub small" style="margin-top:12px">${CONFIG.calib.interval_ms}ms間隔のクリックが${CONFIG.calib.clicks}回鳴ります。最大と最小を除いた6回の中央値を補正値にします。</p>
+    <div class="calib-dots" aria-hidden="true">${dots}</div>
+    ${mic?'<div class="level" style="margin-bottom:16px" aria-hidden="true"><i id="calLvl"></i></div>':'<div class="tapzone" id="tapzone" style="margin-bottom:16px">ここをタップ</div>'}
+    ${body}<p class="small sub" style="margin:12px 0 0">いまの値（${ROUTES[s.route]}・${mic?'マイク':'タップ'}）：${cur?`${cur.offset}ms（ばらつき${cur.std}ms）`:'未測定'}</p></div>`;
+}
+
+/* ---------- S05 ホーム ---------- */
+function vHome(){
+  const li=levelInfo(),q=ensureQuests(),ns=nextStage(),st=streak(),pct=li.need?li.cur/li.need*100:100;
+  const qrow=(x,i)=>`<div class="quest"><span class="check ${x.done?'on':''}" aria-label="${x.done?'達成':'未達成'}">${x.done?ICON.check:''}</span><div><div style="font-weight:500">${esc(x.label)}</div><div class="small sub">+${CONFIG.xp.quest} XP</div></div>${x.done?'<span class="small sub">達成</span>':`<button class="btn" style="min-height:44px;padding:6px 14px" data-act="questGo" data-i="${i}">はじめる</button>`}</div>`;
+  return `<div class="top"><div class="grow logo">FretQuest${stringsStripe()}</div><button class="iconbtn" data-act="go" data-to="tools" aria-label="チューナーとメトロノーム">${ICON.tools}</button><button class="iconbtn" data-act="go" data-to="settings" aria-label="設定">${ICON.gear}</button></div>
+  <div class="hero"><div class="lvl" style="--p:${pct.toFixed(1)}"><span>${li.lv}<small>レベル</small></span></div>
+    <div><div class="row" style="justify-content:space-between"><b class="num" style="font-size:1.25rem">${st}日連続</b><span class="small sub num">今日 ${todayMin()}分</span></div>
+    <div class="small sub num">${li.need?`次のレベルまで ${li.need-li.cur} XP`:'最高レベルです'}</div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div></div>
+  ${needRest()?`<div class="banner" style="margin-top:12px">${ICON.rest}<div><b>今日は${todayMin()}分練習しました</b>指と手首を休めましょう。続けて練習する場合も、こまめに休憩を入れてください。</div></div>`:''}
+  <div class="section">デイリークエスト</div>
+  <div class="card">${q.list.map(qrow).join('')}<div class="small sub" style="margin-top:8px">3つすべて達成で +${CONFIG.xp.quest_all_bonus} XP${q.allBonus?'（獲得済み）':''}・毎日${CONFIG.quest.reset_hour}時に更新${Settings.get().light?'・軽いモード':''}</div></div>
+  ${ns?`<div class="section">続きをプレイ</div><div class="card"><div class="small sub">${esc(WORLDS[ns.world-1].name)}</div><h2 style="margin:2px 0 4px">${esc(stageTitle(ns))}</h2>
+    <div class="row wrap" style="margin-bottom:12px"><span class="pill">${esc(ns.skill)}</span><span class="pill num">${ns.bpm} BPM</span>${starStr(P.stars[ns.id]||0)}</div>
+    <button class="btn primary block" data-act="openStage" data-id="${ns.id}">${ICON.play}ステージを開く</button></div>`:''}
+  ${P.weak.some(weakDue)?`<div class="section">苦手カード</div><button class="card btn block" style="justify-content:space-between" data-act="go" data-to="weak"><span>今日出題のカードが${P.weak.filter(weakDue).length}枚あります</span>${ICON.cards}</button>`:''}
+  <p class="small sub" style="margin-top:24px">${Sync.status==='synced'?'進捗はアカウントに保存されています':Sync.status==='pending'?'通信できないため、進捗を端末に保存しています':'進捗はこの端末に保存されています'}</p>`;
+}
+
+/* ---------- S06 ワールドマップ ---------- */
+function vMap(){
+  const wn=route.w||currentWorld(),w=WORLDS[wn-1],unl=worldUnlocked(wn);
+  const tabs=WORLDS.map((x,i)=>`<button class="chip" data-act="mapWorld" data-w="${i+1}" aria-pressed="${i+1===wn}">${i+1}. ${esc(x.name)}${worldUnlocked(i+1)?'':' （ロック）'}</button>`).join('');
+  const N=w.list.length,gap=96,H=N*gap+30,pts=w.list.map((s,i)=>({x:50+28*Math.sin(i*0.95),y:56+i*gap}));
+  let d=`M${pts[0].x} ${pts[0].y}`;for(let i=1;i<N;i++){const a=pts[i-1],b=pts[i];d+=` C${a.x} ${a.y+gap/2} ${b.x} ${b.y-gap/2} ${b.x} ${b.y}`;}
+  const ns=nextStage();
+  const nodes=w.list.map((s,i)=>{const lk=!stageUnlocked(s),stars=P.stars[s.id]||0,cur=ns&&ns.id===s.id;
+    return `<button class="node ${s.boss?'boss':''} ${lk?'locked':''} ${cur?'cur':''} ${stars?'done':''} ${s.review?'review':''}" style="left:${pts[i].x}%;top:${pts[i].y}px" data-act="openStage" data-id="${s.id}" aria-label="${esc(stageTitle(s))}${lk?'（ロック中）':`、★${stars}つ`}">
+      <span class="disc">${lk?ICON.lock:s.boss?ICON.crown:s.no}</span><span class="stars">${lk?'':starStr(stars)}</span><span class="lbl">${esc(s.t)}</span></button>`;}).join('');
+  return `<div class="top"><div class="grow"><h1>ワールドマップ</h1></div></div><div class="worldtabs">${tabs}</div>
+  <div class="wbanner" style="background:linear-gradient(135deg,${w.tint},${w.tint}AA 60%,#12141C)"><div class="lines" aria-hidden="true">${[1,2,3,4,5,6].map(s=>`<i style="background:var(--s${s})"></i>`).join('')}</div>
+    <div class="small" style="opacity:.8">ワールド${wn}</div><h1>${esc(w.name)}</h1><p>${esc(w.theme)}・BPM ${w.bpm}</p></div>
+  ${unl?'':`<div class="banner" style="margin-top:12px">${ICON.lock}<div><b>まだ解放されていません</b>ワールド${wn-1}のボス戦で★${CONFIG.unlock.boss_stars_to_next_world}つを取ると解放されます。</div></div>`}
+  <div class="path" style="height:${H}px"><svg class="route" viewBox="0 0 100 ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--line)" stroke-width="6" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>${nodes}</div>
+  <p class="small sub">点線の枠は復習ステージです。★${CONFIG.unlock.stars_to_next}つで次のステージが開きます。</p>`;
+}
+
+/* ---------- S07 ステージ詳細 ---------- */
+function vStage(){
+  const st=STAGES[route.id];if(!st)return vMap();const w=WORLDS[st.world-1],s=Settings.get();
+  if(!stageUnlocked(st))return `${backBar('map',stageTitle(st),`data-w="${st.world}"`)}<div class="empty">${ICON.lock}<h2>このステージはまだ開いていません</h2><p class="sub">${st.no===1?`ワールド${st.world-1}のボス戦で★${CONFIG.unlock.boss_stars_to_next_world}つを取ると開きます。`:`前のステージで★${CONFIG.unlock.stars_to_next}つを取ると開きます。`}</p><button class="btn primary" data-act="go" data-to="map" data-w="${st.world}">マップに戻る</button></div>`;
+  const sp=P.speed[st.id]||100,chords=[...new Set(st.prog||[])];
+  const strings=st.kind==='single'||st.kind==='mix'?[...new Set(st.pool.map(p=>p[0]))].sort():null;
+  const cal=getCalib();
+  return `${backBar('map',stageTitle(st),`data-w="${st.world}"`)}
+  <div class="card"><div class="small sub">${esc(w.name)}・${st.boss?'ボス戦':'ステージ'+st.no}${st.review?'（復習）':''}</div>
+    <div class="row wrap" style="margin:8px 0 12px"><span class="pill">身に付く技術：${esc(st.skill)}</span><span class="pill num">${st.bpm} BPM</span><span class="pill num">約${stageLenSec(st,sp)}秒</span></div>
+    <div class="row" style="justify-content:space-between"><span>${starStr(P.stars[st.id]||0)}</span><span class="small sub num">自己ベスト ${(P.best[st.id]||0).toLocaleString()}</span></div></div>
+  ${chords.length?`<div class="section">使うコード</div><div class="diagrams">${chords.map(c=>`<div class="diagram">${chordSVG(c,80,s.hand==='left')}<span>${esc(c)}</span></div>`).join('')}</div>`:''}
+  ${strings?`<div class="section">使う弦</div><p>${strings.map(x=>`<span class="pill" style="margin-right:6px"><i style="width:10px;height:10px;border-radius:50%;background:var(--s${x});display:inline-block"></i>${x}弦</span>`).join('')}（開放弦）</p>`:''}
+  ${st.kind==='seq'||st.kind==='phrase'?`<p class="sub small">ノーツの数字は押さえるフレットです。${st.world===5?'Aマイナーペンタトニック（5フレット）の形を使います。':''}</p>`:''}
+  <div class="section">見本</div><button class="btn block" data-act="guide" data-id="${st.id}">${Guide.on?ICON.stop+'見本を止める':ICON.sound+'見本を聴く（最初の4小節）'}</button>
+  <div class="section">セルフチェック</div><div class="card" style="padding:4px 16px">${w.check.map((c,i)=>`<label class="chk"><input type="checkbox"> <span>${esc(c)}</span></label>`).join('')}</div>
+  <div class="section">速度</div><div class="speed"><input type="range" id="speed" min="${CONFIG.difficulty.min_speed}" max="100" step="5" value="${sp}" aria-label="速度" oninput="document.getElementById('spv').textContent=this.value+'%'"><b class="num" id="spv" style="min-width:52px;text-align:right">${sp}%</b></div>
+  ${P.speed[st.id]&&P.speed[st.id]<100?`<p class="small sub">直近の結果から${P.speed[st.id]}%を選んでいます。</p>`:''}
+  <p class="small sub" style="margin-top:16px">${s.input==='mic'?'マイク判定':'タップ判定'}・${ROUTES[s.route]}・遅延補正 ${cal.offset}ms${cal.assumed?'（推定値。設定で測れます）':''}</p>
+  <button class="btn primary block" style="margin-top:8px" data-act="playStage" data-id="${st.id}">${ICON.play}プレイする</button>`;
+}
+
+/* ---------- S09 結果 ---------- */
+function vResult(){
+  const r=route.res;if(!r)return vHome();const m=r.meta,C=CONFIG;
+  const bins=[...Array(10)].map(()=>0);for(const o of r.offsets){const b=clamp(Math.floor((o+100)/20),0,9);bins[b]++;}const bmx=Math.max(1,...bins);
+  const tend=Math.abs(r.avg)<10?'タイミングはちょうど良いです':r.avg<0?`全体に${Math.round(-r.avg)}ms早めです。少し待ってから弾きましょう`:`全体に${Math.round(r.avg)}ms遅めです。少し早めを意識しましょう`;
+  const toStar=r.stars<3?[C.stars.one,C.stars.two,C.stars.three][r.stars]-r.acc:0;
+  let next='';if(m.mode==='stage'){const st=STAGES[m.stageId];const w=WORLDS[st.world-1];
+    if(!st.boss){const n=w.list[st.no];if(stageUnlocked(n))next=`<button class="btn primary block" data-act="openStage" data-id="${n.id}">次のステージへ</button>`;}
+    else if(st.world<WORLDS.length&&worldUnlocked(st.world+1))next=`<button class="btn primary block" data-act="go" data-to="map" data-w="${st.world+1}">ワールド${st.world+1}へ</button>`;}
+  const weakBars=r.bars.filter(b=>b.acc<C.weak.register_below);
+  return `<div class="top"><div class="grow"><div class="small sub">結果</div><h1>${esc(m.title)}</h1></div></div>
+  <div class="card" style="text-align:center"><div class="bigstars">${starStr(r.stars)}</div>
+    <p style="margin:12px 0 0;font-weight:700">${r.stars?`★${r.stars}つ獲得`:'★まであと少し'}${r.stars<3?`<span class="sub" style="font-weight:400">・次の★まで正確さ あと${toStar.toFixed(1)}%</span>`:''}</p>
+    ${m.mode==='stage'&&r.score>r.prevBest?'<p class="small" style="margin:4px 0 0">自己ベストを更新しました</p>':''}</div>
+  <div class="grades" style="margin-top:12px">${['perfect','great','good','miss'].map(k=>`<div class="grade"><span class="sym" style="color:var(--${k})" aria-hidden="true">${JUDGE_STYLE[k].sym}</span><b class="num">${r.counts[k]}</b><span class="small">${JUDGE_STYLE[k].label}</span></div>`).join('')}</div>
+  <div class="card" style="margin-top:12px"><div class="kv"><span>スコア</span><b class="num">${r.score.toLocaleString()}</b></div><div class="kv"><span>正確さ</span><b class="num">${r.acc.toFixed(1)}%</b></div><div class="kv"><span>最大コンボ</span><b class="num">${r.maxCombo}</b></div><div class="kv"><span>速度</span><b class="num">${r.speed}%</b></div></div>
+  <div class="section">タイミングの傾向</div><div class="card"><p style="margin-bottom:8px">${r.offsets.length?esc(tend):'ヒットしたノーツがありません'}${r.offsets.length?`<span class="sub num">（平均 ${r.avg>0?'+':''}${Math.round(r.avg)}ms）</span>`:''}</p>
+    <div class="hist" aria-hidden="true">${bins.map((v,i)=>`<i class="${i===4||i===5?'mid':''}" style="height:${v/bmx*100}%"></i>`).join('')}</div><div class="row small sub" style="justify-content:space-between"><span>早い −100ms</span><span>0</span><span>+100ms 遅い</span></div></div>
+  ${m.mode==='stage'?`<div class="section">苦手ポイント</div><div class="card">${weakBars.length?weakBars.map(b=>`<div class="kv"><span>${b.bar}小節目</span><b class="num">${b.acc.toFixed(0)}%</b></div>`).join('')+`<p class="small sub" style="margin:8px 0 0">${r.weakFull?`苦手カードが上限の${C.weak.max_cards}枚のため、一部は登録できませんでした。`:'苦手カードに登録しました。明日から出題します。'}</p>`:'<p style="margin:0">正確さ60%未満の小節はありませんでした。</p>'}
+    ${r.wrong?`<p class="small sub" style="margin:8px 0 0">音の高さが違ったノーツが${r.wrong}個ありました。押さえる場所を見本で確かめましょう。</p>`:''}</div>`:''}
+  <div class="section">獲得XP</div><div class="card">${r.xp.length?r.xp.map(x=>`<div class="kv"><span>${esc(x.label)}</span><b class="num">+${x.xp}</b></div>`).join(''):'<p style="margin:0" class="sub">今回は獲得XPがありません</p>'}${r.levelUp?`<p style="margin:8px 0 0;font-weight:700">レベル${r.levelUp}になりました</p>`:''}</div>
+  ${r.msgs.map(x=>`<div class="banner" style="margin-top:12px"><div>${esc(x)}</div></div>`).join('')}
+  ${r.graduated?'<div class="banner" style="margin-top:12px"><div><b>苦手カードを卒業しました</b></div></div>':''}
+  ${r.worldUnlocked?`<div class="banner" style="margin-top:12px"><div><b>ワールド${STAGES[m.stageId].world+1}が解放されました</b></div></div>`:''}
+  ${needRest()?`<div class="banner" style="margin-top:12px">${ICON.rest}<div><b>今日は${todayMin()}分練習しました</b>そろそろ休憩しましょう。</div></div>`:''}
+  <div class="stack" style="margin-top:20px">${next}<button class="btn block ${next?'':'primary'}" data-act="resRetry">もう一度</button><button class="btn ghost block" data-act="go" data-to="${m.back||'map'}">${m.back==='weak'?'苦手カードに戻る':m.back==='home'?'ホームに戻る':'マップに戻る'}</button></div>
+  <button class="btn ghost block small" style="margin-top:8px" data-act="report">${ICON.flag}判定がおかしいと感じたら報告する</button>`;
+}
+
+/* ---------- S10 苦手カード ---------- */
+function vWeak(){
+  const W=CONFIG.weak,list=[...P.weak].sort((a,b)=>a.due<b.due?-1:1);
+  return `<div class="top"><div class="grow"><h1>苦手カード</h1></div><span class="pill num">${P.weak.length}/${W.max_cards}枚</span></div>
+  <p class="sub">正確さ${W.register_below}%未満の小節を記録し、${W.intervals_days.join('日後・')}日後に出題します。出題日に${W.graduate_accuracy}%以上を${W.graduate_passes}回取ると卒業です。</p>
+  ${list.length?`<div class="stack">${list.map(w=>{const st=STAGES[w.stageId];const due=weakDue(w);return `<div class="card"><div class="small sub">${esc(WORLDS[st.world-1].name)}</div><h2 style="margin:2px 0">${esc(st.t)}・${w.bar}小節目</h2>
+    <div class="row" style="justify-content:space-between;margin:8px 0 12px"><span class="${due?'':'sub'}">${due?'<b>今日出題</b>':'次の出題 '+fmtDay(w.due)}</span><span class="dots" aria-label="合格${w.passes}回">${[...Array(W.graduate_passes)].map((_,i)=>`<i class="${i<w.passes?'on':''}"></i>`).join('')}</span></div>
+    <button class="btn ${due?'primary':''} block" data-act="playWeak" data-id="${w.id}">${ICON.play}${due?'練習する':'先に練習する（記録はされません）'}</button></div>`;}).join('')}</div>`
+  :`<div class="empty">${ICON.cards}<h2>苦手カードはありません</h2><p class="sub">ステージで正確さ${W.register_below}%未満の小節があると、ここに追加されます。</p><button class="btn primary" data-act="go" data-to="map">マップを開く</button></div>`}`;
+}
+
+/* ---------- S11 リーグ ---------- */
+function vLeague(){
+  const L=CONFIG.league;
+  if(!League.allowed())return `<div class="top"><div class="grow"><h1>リーグ</h1></div></div><div class="empty">${ICON.trophy}<h2>リーグは13歳以上の方に表示されます</h2></div>`;
+  if(!Cap.db||!Cap.uid)return `<div class="top"><div class="grow"><h1>リーグ</h1></div></div><div class="empty">${ICON.trophy}<h2>リーグは公開したページで使えます</h2><p class="sub">claude.aiで公開されたこのアプリを開くと、同じ組織のメンバーと1週間のXPを競えます。上位${L.promote}人が昇格、下位${L.demote}人が降格します。</p><p class="small sub">今週のあなたのXP：<b class="num">${weekXP()}</b></p></div>`;
+  if(!League.rows&&!League.loading&&!League.err)League.load();
+  if(League.err)return `<div class="top"><div class="grow"><h1>リーグ</h1></div></div><div class="empty"><h2>${esc(League.err)}</h2><button class="btn" data-act="leagueReload">読み込み直す</button></div>`;
+  if(!League.rows)return `<div class="top"><div class="grow"><h1>リーグ</h1></div></div><div class="empty"><p class="sub">読み込み中です…</p></div>`;
+  const me=League.mine();if(!me)return `<div class="empty"><p class="sub">読み込み中です…</p></div>`;
+  const wk=weekKey(),group=League.rows.filter(r=>r.week===wk&&r.tier===me.tier).sort((a,b)=>b.xp-a.xp||(a.id===Cap.uid?-1:1)).slice(0,L.group_size);
+  const rank=group.findIndex(r=>r.id===Cap.uid)+1,n=group.length;
+  const toPromote=rank>L.promote?(group[L.promote-1].xp-me.xp+1):0;
+  const rows=group.map((r,i)=>`${i===L.promote&&n>L.promote?`<div class="lline">ここまで昇格</div>`:''}${n>L.promote+L.demote&&i===n-L.demote?`<div class="lline">ここから降格</div>`:''}
+    <div class="lrow ${r.id===Cap.uid?'me':''}"><b class="num">${i+1}</b><span data-uid="${esc(r.id)}">${r.id===Cap.uid?'あなた':esc(League.names[r.id]||'プレイヤー')}</span><span class="num">${r.xp} XP</span></div>`).join('');
+  const d=new Date(weekStart()+7*864e5);
+  return `<div class="top"><div class="grow"><h1>リーグ</h1></div><button class="iconbtn" data-act="leagueReload" aria-label="更新">${ICON.trophy}</button></div>
+  <div class="card"><div class="small sub">今週の段位</div><h2 style="margin:2px 0">${TIERS[me.tier]}リーグ</h2>
+    <div class="kv"><span>順位</span><b class="num">${rank}位 / ${n}人</b></div><div class="kv"><span>今週のXP</span><b class="num">${me.xp}</b></div>
+    <p class="small sub" style="margin:4px 0 0">${rank<=L.promote?(me.tier<L.tiers-1?'いまは昇格圏にいます':'最上位のリーグです'):`昇格ラインまで あと${toPromote} XP`}・${d.getMonth()+1}/${d.getDate()} ${CONFIG.quest.reset_hour}時に締め切り</p>
+    ${me.moved==='up'?'<p style="margin:8px 0 0;font-weight:700">先週の結果で昇格しました</p>':me.moved==='down'?'<p style="margin:8px 0 0">先週の結果で降格しました</p>':''}</div>
+  <div class="section">順位</div><div>${rows}</div>`;
+}
+
+/* ---------- S12 マイページ ---------- */
+function vMy(){
+  const li=levelInfo(),tot=Object.values(P.playLog).reduce((a,b)=>a+b,0),days=[];for(let i=6;i>=0;i--){const k=addDays(dayKey(),-i);days.push([k,Math.round((P.playLog[k]||0)/60)]);}
+  const mx=Math.max(10,...days.map(d=>d[1]));const log=LS.get('fq.judgelog',{});const all=Object.values(log).flat();const avg=all.length?all.reduce((a,b)=>a+b,0)/all.length:null;
+  const age=P.profile&&P.profile.ageClass;const recent=[...P.history].reverse().slice(0,5);
+  return `<div class="top"><div class="grow"><h1>マイページ</h1></div><button class="iconbtn" data-act="go" data-to="tools" aria-label="ツール">${ICON.tools}</button><button class="iconbtn" data-act="go" data-to="settings" aria-label="設定">${ICON.gear}</button></div>
+  <div class="card"><div class="kv"><span>レベル</span><b class="num">${li.lv}</b></div><div class="kv"><span>累計XP</span><b class="num">${totalXP().toLocaleString()}</b></div><div class="kv"><span>練習時間の合計</span><b class="num">${Math.floor(tot/3600)}時間${Math.floor(tot%3600/60)}分</b></div><div class="kv"><span>連続日数</span><b class="num">${streak()}日</b></div></div>
+  <div class="section">直近7日の練習（分）</div><div class="card"><div class="week">${days.map(([k,v])=>`<div><span class="small num">${v}</span><i style="height:${v/mx*80}%"></i><span class="small sub">${fmtDay(k).replace(/^\d+\//,'').replace(/（.）/,'')}</span></div>`).join('')}</div></div>
+  <div class="section">タイミングの傾向（30日）</div><div class="card"><p style="margin:0">${avg==null?'まだ記録がありません':Math.abs(avg)<10?'おおむね正確なタイミングで弾けています':avg<0?`平均${Math.round(-avg)}ms早めに弾く傾向があります`:`平均${Math.round(avg)}ms遅めに弾く傾向があります`}</p></div>
+  <div class="section">バッジ</div><div class="badges">${badges().map(b=>`<div class="badge ${b.on?'':'off'}"><span class="b">${esc(b.b)}</span>${esc(b.t)}</div>`).join('')}</div>
+  ${recent.length?`<div class="section">最近のプレイ</div><div class="card">${recent.map(h=>{const st=STAGES[h.ref];const name=st?stageTitle(st):h.mode==='drill'?(DRILLS[h.ref]?DRILLS[h.ref].t:'ドリル'):'苦手カード';return `<div class="kv"><span>${esc(name)}</span><span class="num">${h.acc}%</span></div>`;}).join('')}</div>`:''}
+  ${age==='child'||age==='teen'?`<div class="section">保護者と共有</div><div class="card"><p class="sub">練習の記録を文章にして、保護者の方に送れます。</p><button class="btn block" data-act="share">${ICON.user}記録の文章を作る</button></div>`:''}`;
+}
+
+/* ---------- S13 ツール（チューナー・メトロノーム） ---------- */
+const Metro={bpm:LS.get('fq.metro',{bpm:80}).bpm,beats:4,on:false,timer:null,next:0,beat:0,
+  async start(){await A.resume();this.on=true;this.next=A.ctx.currentTime+0.1;this.beat=0;this.timer=setInterval(()=>this.tick(),25);this.tick();},
+  tick(){const c=A.ctx;while(this.next<c.currentTime+0.12){const b=this.beat%this.beats,t=this.next;A.click(t,b===0);const d=(t-c.currentTime)*1000;setTimeout(()=>this.flash(b),Math.max(0,d));this.next+=60/this.bpm;this.beat++;}},
+  flash(b){document.querySelectorAll('.beatdots i').forEach((el,i)=>{el.classList.toggle('on',i===b);});},
+  stop(){this.on=false;clearInterval(this.timer);this.timer=null;},
+  set(b){this.bpm=clamp(Math.round(b),40,200);LS.set('fq.metro',{bpm:this.bpm});const e=$('#mBpm');if(e)e.textContent=this.bpm;const r=$('#mRange');if(r&&+r.value!==this.bpm)r.value=this.bpm;}
+};
+const Tuner={timer:null,hist:[],
+  bind(){if(route.tab!=='metro'&&Mic.ok&&!this.timer)this.run();},
+  async begin(){const ok=await Mic.start();if(!ok){toast(Mic.error||'マイクを使えません');render();return;}render();},
+  run(){this.timer=setInterval(()=>this.tick(),80);},
+  tick(){if(route.name!=='tools'||route.tab==='metro'){this.stop();return;}const seg=Mic.latest(2048);let e=0;for(let i=1024;i<2048;i++)e+=seg[i]*seg[i];const db=10*Math.log10(e/1024+1e-12);
+    const r=db>-55?yin(seg,Mic.sr,0.15):{freq:0};const el=$('#tNote');if(!el)return;
+    if(r.freq<60||r.freq>1100){if(db<=-55){this.hist=[];}return;}
+    const m=69+12*Math.log2(r.freq/440);this.hist.push(m);if(this.hist.length>5)this.hist.shift();const sm=[...this.hist].sort((a,b)=>a-b)[this.hist.length>>1];
+    const near=Math.round(sm),cents=Math.round((sm-near)*100);el.textContent=midiName(near);$('#tCents').textContent=(cents>0?'+':'')+cents+' セント';$('#tFreq').textContent=r.freq.toFixed(1)+' Hz';
+    $('#tNeedle').style.left=clamp(50+cents,0,100)+'%';$('#tNeedle').style.background=Math.abs(cents)<=5?'var(--great)':'var(--accent)';
+    let bs=1,bd=99;for(let s=1;s<=6;s++){const d=Math.abs(sm-OPEN[s]);if(d<bd){bd=d;bs=s;}}
+    document.querySelectorAll('.strs span').forEach(sp=>{const s=+sp.dataset.s;const on=s===bs&&bd<2.5;sp.classList.toggle('on',on);sp.style.background=on?`var(--s${s})`:'';});},
+  stop(){clearInterval(this.timer);this.timer=null;}
+};
+function vTools(){
+  const tab=route.tab||'tuner';
+  const seg=`<div class="chips" role="tablist" style="margin-bottom:16px"><button class="chip" role="tab" aria-pressed="${tab==='tuner'}" data-act="toolTab" data-tab="tuner">チューナー</button><button class="chip" role="tab" aria-pressed="${tab==='metro'}" data-act="toolTab" data-tab="metro">メトロノーム</button></div>`;
+  if(tab==='metro')return `${backBar('home','ツール')}${seg}<div class="card"><div class="bpm num" id="mBpm">${Metro.bpm}</div><p class="sub" style="text-align:center;margin:0">BPM</p>
+    <div class="beatdots" aria-hidden="true">${[...Array(Metro.beats)].map((_,i)=>`<i class="${i===0?'acc':''}"></i>`).join('')}</div>
+    <div class="row"><button class="btn" data-act="metroStep" data-d="-5" aria-label="5下げる">−5</button><input id="mRange" type="range" min="40" max="200" value="${Metro.bpm}" style="flex:1;accent-color:var(--accent)" aria-label="テンポ" oninput="Metro.set(this.value)"><button class="btn" data-act="metroStep" data-d="5" aria-label="5上げる">+5</button></div>
+    <div class="section">拍子</div>${chipSet('beats',[['2','2拍'],['3','3拍'],['4','4拍']],String(Metro.beats),'metroBeats')}
+    <button class="btn primary block" style="margin-top:16px" data-act="metroToggle">${Metro.on?ICON.stop+'止める':ICON.play+'鳴らす'}</button></div>`;
+  return `${backBar('home','ツール')}${seg}<div class="card tuner">${Mic.ok?`<div class="note" id="tNote">–</div><div class="sub num" id="tCents">弦を1本鳴らしてください</div>
+    <div class="meter" aria-hidden="true"><div class="scale"></div><div class="center"></div><div class="needle" id="tNeedle"></div></div><div class="small sub num" id="tFreq"> </div>
+    <div class="strs" style="margin-top:16px">${[6,5,4,3,2,1].map(s=>`<span data-s="${s}" style="border-color:var(--s${s})">${'EADGBE'[6-s]}</span>`).join('')}</div><p class="small sub" style="margin:12px 0 0">左から6弦・5弦・4弦・3弦・2弦・1弦。針が中央で緑になれば合っています。</p>`
+    :`${ICON.mic}<h2>チューナーはマイクを使います</h2><p class="sub">${esc(Mic.error||'弦を1本ずつ鳴らすと、音の高さを表示します。')}</p><button class="btn primary block" data-act="tunerStart">マイクを使って始める</button>`}</div>`;
+}
+
+/* ---------- S14 設定 ---------- */
+function sw(k,label,sub){const v=Settings.get()[k];return `<div class="set"><div><div>${label}</div>${sub?`<div class="small sub">${sub}</div>`:''}</div><label class="switch"><input type="checkbox" data-act="setBool" data-k="${k}" ${v?'checked':''} aria-label="${esc(label)}"><span></span></label></div>`;}
+function sel(k,label,opts){const v=String(Settings.get()[k]);return `<div class="set"><label for="sel_${k}">${label}</label><select id="sel_${k}" data-act="setSel" data-k="${k}">${opts.map(([a,b])=>`<option value="${a}" ${String(a)===v?'selected':''}>${b}</option>`).join('')}</select></div>`;}
+function vSettings(){
+  const s=Settings.get(),c=getCalib(),pr=P.profile||{};
+  return `${backBar('my','設定')}
+  <div class="section">判定</div><div class="card">
+    ${sel('route','音を聞く方法',Object.entries(ROUTES))}${sel('input','判定のしかた',[['mic','マイクで音を聞き取る'],['tap','画面をタップする']])}
+    <div class="set"><div><div>遅延キャリブレーション</div><div class="small sub num">${c.assumed?'未測定（推定 '+c.offset+'ms）':c.offset+'ms・ばらつき'+c.std+'ms'}</div></div><button class="btn" data-act="go" data-to="calib">測り直す</button></div>
+    ${sel('gate','発音を検出する大きさ',[[6,'小さな音も拾う（+6dB）'],[9,'やや敏感（+9dB）'],[12,'標準（+12dB）'],[15,'やや鈍い（+15dB）'],[18,'大きな音だけ（+18dB）']])}
+    ${sw('click','プレイ中にクリックを鳴らす','拍がわかりやすくなります')}
+    <div class="set"><label for="vol">伴奏の音量</label><input id="vol" type="range" min="0" max="1" step="0.05" value="${s.volume}" style="width:50%;accent-color:var(--accent)" data-act="setVol"></div></div>
+  <div class="section">表示</div><div class="card">
+    ${sel('theme','テーマ',[['system','端末に合わせる'],['dark','ダーク'],['light','ライト']])}${sel('hand','ピックを持つ手',[['right','右手'],['left','左手（弦とボタンの並びを反転）']])}
+    ${sel('fs','文字の大きさ',[[1,'標準'],[1.15,'大きい'],[1.3,'とても大きい（130%）']])}${sw('calm','演出を減らす','判定の拡大や揺れをなくし、形と色だけで示します')}</div>
+  <div class="section">練習</div><div class="card">${sw('light','軽いモード','デイリークエストを単音と開放弦のドリルにします（明日から反映）')}</div>
+  <div class="section">プロフィール</div><div class="card"><div class="set"><span>年齢区分</span><span class="sub">${{child:'13歳未満',teen:'13〜17歳',adult:'18歳以上'}[pr.ageClass]||'未設定'}</span></div>
+    <div class="set"><span>進捗の保存先</span><span class="sub">${Sync.status==='synced'?'アカウント':'この端末'}</span></div>
+    <div class="set"><div><div>進捗を消す</div><div class="small sub">★、XP、苦手カードがすべて消えます</div></div><button class="btn" data-act="resetAsk">消す</button></div></div>`;
+}
+function vCalib(){return `${backBar('settings','遅延キャリブレーション')}<p class="sub">判定のずれが気になるとき、音を聞く方法を変えたときに測り直してください。値は端末と聞く方法ごとに保存します。</p>${calibBlock()}`;}
+
+/* ========== 操作 ========== */
+function playStage(id,speed){const st=STAGES[id];const sp=speed||P.speed[id]||100;const meta={mode:'stage',stageId:id,title:stageTitle(st),back:'map',rebuild:()=>buildChart(st,sp)};Play.start(meta.rebuild(),meta);}
+function playDrill(id){const d=DRILLS[id];const bars=Math.ceil(60000/(240000/d.def.bpm));const meta={mode:'drill',drillId:id,title:d.t,back:'home',rebuild:()=>buildChart(d.def,100,{bars})};Play.start(meta.rebuild(),meta);}
+function playWeak(id){const w=P.weak.find(x=>x.id===id);if(!w)return;const st=STAGES[w.stageId];const meta={mode:'weak',cardId:id,title:'苦手カード：'+weakLabel(w),back:'weak',rebuild:()=>buildBarChart(st,w.speed||100,w.bar)};Play.start(meta.rebuild(),meta);}
+const ACT={
+  go:d=>go(d.to,d.w?{w:+d.w}:{}),
+  obSet:d=>{OB[d.k]=d.v;render();},
+  obMic:async()=>{const ok=await Mic.start();if(ok){Settings.set('input','mic');go('ob4');}else render();},
+  obTap:()=>{Settings.set('input','tap');go('ob4');},
+  obFinish:()=>finishOnboarding(),
+  setRoute:d=>{Settings.set('route',d.v);Calib.result=null;if(Calib.phase==='done')Calib.phase='idle';render();},
+  calibRun:()=>Calib.run(),
+  calibAccept:()=>{Calib.accept();toast('補正値を保存しました');if(/^ob/.test(route.name))finishOnboarding();else go('settings');},
+  mapWorld:d=>go('map',{w:+d.w}),
+  openStage:d=>{const st=STAGES[d.id];if(!worldUnlocked(st.world)){go('map',{w:st.world});return;}go('stage',{id:d.id});},
+  guide:async d=>{if(Guide.on){Guide.stop();render();return;}const st=STAGES[d.id];const sp=+($('#speed')||{value:100}).value;await Guide.play(buildChart(st,sp),4);render();},
+  playStage:d=>playStage(d.id,+($('#speed')||{value:0}).value),
+  playWeak:d=>playWeak(d.id),
+  questGo:d=>{const q=ensureQuests().list[+d.i];if(!q)return;if(q.kind==='drill')playDrill(q.ref);else if(q.kind==='weak')playWeak(q.ref);else go('stage',{id:q.ref});},
+  pBegin:()=>Play.begin(),pQuit:()=>Play.quit(),pResume:()=>Play.resume(),pRetry:()=>Play.retry(),
+  resRetry:()=>{const m=route.res.meta;Play.start(m.rebuild(),m);},
+  report:()=>modal(`<h2>判定についての報告</h2><p class="sub small">どのように感じたか選んでください。音声は送りません。</p>${chipSet('reason',[['missed','弾いたのにMISSになった'],['ghost','弾いていないのに判定された'],['timing','タイミングがずれている'],['other','その他']],null,'repPick')}
+    <textarea id="repTxt" style="margin-top:12px" placeholder="気づいたこと（任意）" aria-label="詳しい内容"></textarea><div class="stack" style="margin-top:12px"><button class="btn primary block" data-act="repSend">送る</button><button class="btn ghost block" data-act="closeModal">閉じる</button></div>`),
+  repPick:(d,el)=>{document.querySelectorAll('#sheet .chip').forEach(c=>c.setAttribute('aria-pressed',c===el));$('#sheet').dataset.reason=d.v;},
+  repSend:async()=>{const r=route.res;const item={t:Date.now(),reason:$('#sheet').dataset.reason||'other',text:($('#repTxt').value||'').slice(0,500),ref:r?r.meta.stageId||r.meta.drillId||r.meta.cardId:'',acc:r?Math.round(r.acc):null,route:Settings.get().route,input:Settings.get().input,offset:getCalib().offset};
+    const list=[...LS.get('fq.reports',[]),item].slice(-20);LS.set('fq.reports',list);let sent=false;
+    if(Cap.db&&Cap.uid){try{await Cap.db.doc('reports/'+Cap.uid).set({items:list});sent=true;}catch(e){}}
+    closeModal();toast(sent?'報告を送りました。判定の改善に使います':'報告をこの端末に記録しました');},
+  closeModal:()=>closeModal(),
+  toolTab:d=>{Tuner.stop();route.tab=d.tab;render();},
+  tunerStart:()=>Tuner.begin(),
+  metroToggle:()=>{if(Metro.on)Metro.stop();else Metro.start();render();},
+  metroStep:d=>Metro.set(Metro.bpm+(+d.d)),
+  metroBeats:d=>{Metro.beats=+d.v;render();},
+  leagueReload:()=>{League.rows=null;League.err=null;render();},
+  share:async()=>{const li=levelInfo();let wk=0;for(let i=0;i<7;i++)wk+=(P.playLog[addDays(dayKey(),-i)]||0);
+    const txt=`FretQuest の練習記録\n直近7日の練習：${Math.round(wk/60)}分\n連続日数：${streak()}日\nレベル：${li.lv}\n★の数：${Object.values(P.stars).reduce((a,b)=>a+b,0)}`;
+    let ok=false;try{await navigator.clipboard.writeText(txt);ok=true;}catch(e){}
+    modal(`<h2>練習記録の文章</h2><p class="sub small">${ok?'コピーしました。メッセージに貼り付けて送れます。':'下の文章を選択してコピーしてください。'}</p><textarea readonly>${esc(txt)}</textarea><button class="btn block" style="margin-top:12px" data-act="closeModal">閉じる</button>`);},
+  resetAsk:()=>modal(`<h2>進捗を消しますか</h2><p class="sub">★、XP、苦手カード、練習記録がすべて消えます。元に戻せません。遅延の補正値と設定は残ります。</p><div class="stack"><button class="btn primary block" data-act="resetDo">消す</button><button class="btn ghost block" data-act="closeModal">やめる</button></div>`),
+  resetDo:()=>{const prof=P.profile;P=blankProgress();P.profile=prof;save();closeModal();go('home');toast('進捗を消しました');}
+};
+function finishOnboarding(){
+  Calib.stop();const y=+OB.by,m=+OB.bm,now=new Date();let age=now.getFullYear()-y-((now.getMonth()+1)<m?1:0);
+  const ageClass=age<13?'child':age<18?'teen':'adult';
+  P.profile={guitar:OB.guitar,hand:OB.hand,exp:OB.exp,birth:`${y}-${String(m).padStart(2,'0')}`,ageClass,onboarded:true,createdAt:Date.now(),updatedAt:Date.now()};
+  Settings.set('hand',OB.hand||'right');save();go('home');
+}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.tagName==='SELECT'||el.type==='checkbox'||el.type==='range')return;const f=ACT[el.dataset.act];if(f){e.preventDefault();f(el.dataset,el,e);}});
+document.addEventListener('change',e=>{const el=e.target;const a=el.dataset&&el.dataset.act;if(!a)return;
+  if(a==='obSel'){OB[el.dataset.k]=el.value;render();}
+  if(a==='setSel'){const k=el.dataset.k;let v=el.value;if(k==='fs'||k==='gate')v=+v;Settings.set(k,v);if(k==='input'||k==='route')Calib.result=null;if(k==='light'){}render();}
+  if(a==='setBool'){Settings.set(el.dataset.k,el.checked);}
+  if(a==='setVol'){Settings.set('volume',+el.value);}});
+document.addEventListener('pointerdown',e=>{if(e.target.closest('#tapzone'))Calib.tap(e);});
+
+/* ========== 起動 ========== */
+applySettings();render();
+(async()=>{
+  if(!window.claude||typeof window.claude.use!=='function')return;
+  try{const[db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);Cap.db=db;Cap.user=user;
+    if(user){try{Cap.uid=await user.id();}catch(e){}}
+    if(db){await loadRemoteConfig();await Sync.init();}
+    if(route.name==='league')render();}catch(e){}
+})();
+/* ========== PWA：Service Worker の登録 ========== */
+if('serviceWorker' in navigator&&window.isSecureContext&&window.self===window.top){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>
