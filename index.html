@@ -188,6 +188,17 @@ label.chk input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
 .calib-dots i.missd{background:var(--miss);border-color:var(--miss)}
 .level{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
 .level i{display:block;height:100%;background:var(--great);width:0}
+.lmeter{position:relative;height:18px;border-radius:9px;background:var(--surface2);overflow:hidden;margin:8px 0 4px}
+.lmeter i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--great);border-radius:9px}
+.lmeter b{position:absolute;top:-2px;bottom:-2px;width:3px;border-radius:2px;left:0;display:none}
+.lmeter b.amb{background:var(--sub)}
+.lmeter b.thr{background:var(--accent)}
+.lmkey{display:flex;gap:16px;flex-wrap:wrap;font-size:.8125rem;color:var(--sub)}
+.lmkey span{display:inline-flex;align-items:center;gap:6px}
+.lmkey span::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--k)}
+.lnote{font-size:3rem;font-weight:900;line-height:1;text-align:center;min-height:3rem}
+ul.tips{margin:0;padding-left:1.2em}
+ul.tips li{margin:2px 0}
 .tapzone{min-height:140px;border-radius:12px;border:2px dashed var(--line);display:grid;place-items:center;font-weight:700;cursor:pointer;user-select:none;touch-action:manipulation;background:var(--surface)}
 /* play */
 #play{position:fixed;inset:0;z-index:50;background:#12141C;color:#F2F2F5;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -519,7 +530,7 @@ class OnsetDetector{
     this.fft(re,im);let flux=0;
     for(let k=2;k<this.kMax;k++){const m=Math.log1p(20*Math.hypot(re[k],im[k]));const d=m-this.prev[k];if(d>0)flux+=d;this.prev[k]=m;}
     const thr=this.mu+2.5*Math.sqrt(Math.max(this.va,0))+2;
-    const on=flux>thr&&flux>=this.prevFlux&&db>this.ambientDb+this.gateDb&&(idx-this.last)>this.sr*0.07;
+    const on=flux>thr&&flux>=this.prevFlux&&db>this.ambientDb+this.gateDb&&(idx-this.last)>this.sr*(this.minGapS||0.07);
     const fl=Math.min(flux,thr*1.5);this.mu+=0.02*(fl-this.mu);this.va+=0.02*((fl-this.mu)*(fl-this.mu)-this.va);
     this.prevFlux=flux;if(on)this.last=idx;return on;
   }
@@ -631,9 +642,9 @@ const Mic={
       if(n==='NotReadableError'||n==='TrackStartError'||n==='AbortError')return this.fail('busy');
       return this.fail('other');}
     this.sr=c.sampleRate;this.ring=new Float32Array(1<<18);this.mask=this.ring.length-1;this.pos=0;this.nextHop=0;this.anchor=Infinity;this.t0=performance.now();
-    this.det=new OnsetDetector(this.sr);this.det.gateDb=Settings.get().gate;this.fft8k=makeFFT(8192);
+    this.det=new OnsetDetector(this.sr);this.det.gateDb=micGate();this.fft8k=makeFFT(8192);
     const src=c.createMediaStreamSource(this.stream);const node=c.createScriptProcessor(512,1,1);const z=c.createGain();z.gain.value=0;
-    src.connect(node);node.connect(z);z.connect(c.destination);node.onaudioprocess=e=>this.process(e.inputBuffer.getChannelData(0));
+    this.wire(src,node);node.connect(z);z.connect(c.destination);node.onaudioprocess=e=>this.process(e.inputBuffer.getChannelData(0));
     this.node=node;this._src=src;this.ok=true;this.error=null;this.hint='';this.reason=null;
     this.stream.getAudioTracks().forEach(t=>t.addEventListener('ended',()=>{this.ok=false;try{node.disconnect();src.disconnect();}catch(e){}}));
     return true;
@@ -643,8 +654,9 @@ const Mic={
     if(performance.now()-this.t0<4000){const a=A.ctx.currentTime-this.pos/this.sr;if(a<this.anchor)this.anchor=a;}
     const active=this.listeners.size>0;
     while(this.nextHop+1024<=this.pos){const s=this.nextHop;
-      if(active||this.meter){for(let i=0;i<1024;i++)this.frame[i]=r[(s+i)&m];const idx=s+1024-128;const on=this.det.step(this.frame,idx);
+      if(active||this.meter||this.tap){for(let i=0;i<1024;i++)this.frame[i]=r[(s+i)&m];const idx=s+1024-128;const on=this.det.step(this.frame,idx);
         if(this.measure){this.measure.sum+=this.det.db;this.measure.n++;}
+        if(this.tap)this.tap(this.det.db);
         if(on&&active){const ev={idx,time:this.timeOf(idx),db:this.det.db};for(const fn of this.listeners)fn(ev);}}
       this.nextHop+=128;}
     if(this.reqs.length){const keep=[];for(const q of this.reqs){if(this.pos>=q.start+q.len){const seg=new Float32Array(q.len);for(let i=0;i<q.len;i++)seg[i]=r[(q.start+i)&m];q.cb(seg);}else keep.push(q);}this.reqs=keep;}
@@ -656,6 +668,20 @@ const Mic={
   measureAmbient(ms){return new Promise(res=>{this.meter=true;this.measure={sum:0,n:0};setTimeout(()=>{const m=this.measure;this.measure=null;this.meter=false;const db=m&&m.n?m.sum/m.n:-60;this.det.ambientDb=Math.max(-90,Math.min(-25,db));res(this.det.ambientDb);},ms);});},
   level(){return this.det?this.det.db:-100;},
   setGate(v){if(this.det)this.det.gateDb=v;},
+  /* 入力の経路をつなぐ。アンプなしのときは、ギターの音域（70Hz〜4kHz）だけを通して増幅する */
+  tap:null,fx:null,mode:'amp',gainDb:0,
+  wire(src,node,force){
+    const c=A.ctx,s=Settings.get();
+    if(!this.fx){const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=70;hp.Q.value=0.7071;
+      const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4000;lp.Q.value=0.7071;const g=c.createGain();hp.connect(lp);lp.connect(g);this.fx={hp,lp,g};}
+    try{src.disconnect();}catch(e){}try{this.fx.g.disconnect();}catch(e){}
+    const mode=force?force.mode:s.pickup,gain=force?force.gain:s.inGain;
+    if(mode==='unplugged'){this.fx.g.gain.value=10**(gain/20);src.connect(this.fx.hp);this.fx.g.connect(node);}
+    else src.connect(node);
+    this.mode=mode;this.gainDb=mode==='unplugged'?gain:0;
+    if(this.det)this.det.minGapS=mode==='unplugged'?0.12:0.07;
+  },
+  setInput(){if(this.ok&&this._src&&this.node)this.wire(this._src,this.node);},
   /* 音の判定：単音はYIN、和音はクロマ */
   checkNote(ev,note,cb){
     const sr=this.sr;
@@ -666,15 +692,17 @@ const Mic={
 };
 /* ========== 端末の設定（同期しない） ========== */
 const Settings={
-  d:{theme:'system',route:'wired',input:'mic',hand:'right',calm:false,fs:1,light:false,volume:0.7,click:true,gate:12},
+  d:{theme:'system',route:'wired',input:'mic',hand:'right',calm:false,fs:1,light:false,volume:0.7,click:true,gate:12,pickup:'amp',inGain:30,gateU:6,levelAt:0,levelSnr:null},
   get(){return this._v||(this._v={...this.d,...LS.get('fq.settings',{})});},
   set(k,v){const s=this.get();s[k]=v;LS.set('fq.settings',s);applySettings();}
 };
 function applySettings(){
   const s=Settings.get(),r=document.documentElement;
   if(s.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',s.theme);
-  r.style.setProperty('--fs',s.fs);r.classList.toggle('calm',!!s.calm);A.setVolume(s.volume);Mic.setGate(s.gate);
+  r.style.setProperty('--fs',s.fs);r.classList.toggle('calm',!!s.calm);A.setVolume(s.volume);Mic.setGate(micGate());Mic.setInput();
 }
+/* いまのモードで使う検出の基準（dB） */
+function micGate(){const s=Settings.get();return s.pickup==='unplugged'?s.gateU:s.gate;}
 /* 遅延の補正値：端末と出力経路（＋入力方法）の組ごと */
 const ROUTES={wired:'有線イヤホン',speaker:'スピーカー',bluetooth:'Bluetooth',external:'オーディオIF'};
 function calibKey(){const s=Settings.get();return s.route+'|'+s.input;}
@@ -1082,15 +1110,15 @@ function stageLenSec(st,speed=100){const ch=buildChart(st,speed);return Math.rou
 
 /* ========== 画面の切り替え ========== */
 let route={name:'home'};const OB={};
-function go(name,params={}){Guide.stop();if(route.name==='tools'&&name!=='tools'){Metro.stop();Tuner.stop();}if(Calib.phase!=='idle'&&name!==route.name)Calib.stop();route={name,...params};render();window.scrollTo(0,0);}
+function go(name,params={}){Guide.stop();if(route.name==='tools'&&name!=='tools'){Metro.stop();Tuner.stop();}if(Calib.phase!=='idle'&&name!==route.name)Calib.stop();if(LevelCheck.phase!=='idle'&&name!==route.name)LevelCheck.stop();route={name,...params};render();window.scrollTo(0,0);}
 function render(){
   if(!(P.profile&&P.profile.onboarded)&&!/^ob/.test(route.name))route={name:'ob1'};
-  const V={ob1:vOb1,ob2:vOb2,ob3:vOb3,ob4:vOb4,home:vHome,map:vMap,stage:vStage,result:vResult,weak:vWeak,league:vLeague,my:vMy,tools:vTools,settings:vSettings,calib:vCalib}[route.name]||vHome;
+  const V={ob1:vOb1,ob2:vOb2,ob3:vOb3,ob4:vOb4,home:vHome,map:vMap,stage:vStage,result:vResult,weak:vWeak,league:vLeague,my:vMy,tools:vTools,settings:vSettings,calib:vCalib,level:()=>vLevel(false),obLevel:()=>vLevel(true)}[route.name]||vHome;
   $('#view').innerHTML=V();
   const showTabs=!/^ob/.test(route.name);$('#tabs').style.display=showTabs?'':'none';
   if(showTabs){const child=P.profile&&P.profile.ageClass==='child';
     const tabs=[['home','ホーム','home'],['map','マップ','map'],['weak','苦手','cards'],child?['tools','ツール','tools']:['league','リーグ','trophy'],['my','マイページ','user']];
-    const cur={stage:'map',result:'map',settings:'my',calib:'my'}[route.name]||route.name;
+    const cur={stage:'map',result:'map',settings:'my',calib:'my',level:'my'}[route.name]||route.name;
     $('#tabsIn').innerHTML=tabs.map(([k,l,i])=>`<button data-act="go" data-to="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}<span>${l}</span></button>`).join('');}
   if(route.name==='tools')Tuner.bind();
 }
@@ -1141,6 +1169,7 @@ function vHome(){
   <div class="hero"><div class="lvl" style="--p:${pct.toFixed(1)}"><span>${li.lv}<small>レベル</small></span></div>
     <div><div class="row" style="justify-content:space-between"><b class="num" style="font-size:1.25rem">${st}日連続</b><span class="small sub num">今日 ${todayMin()}分</span></div>
     <div class="small sub num">${li.need?`次のレベルまで ${li.need-li.cur} XP`:'最高レベルです'}</div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div></div>
+  ${Settings.get().input==='mic'&&!Settings.get().levelAt?`<button class="banner btn block" style="margin-top:12px;justify-content:flex-start;text-align:left;font-weight:400;border:0" data-act="go" data-to="level">${ICON.mic}<div><b>ギターの音の聞き取りを合わせる</b>アンプにつながずに弾く場合は、先に合わせると判定が安定します。</div></button>`:''}
   ${needRest()?`<div class="banner" style="margin-top:12px">${ICON.rest}<div><b>今日は${todayMin()}分練習しました</b>指と手首を休めましょう。続けて練習する場合も、こまめに休憩を入れてください。</div></div>`:''}
   <div class="section">デイリークエスト</div>
   <div class="card">${q.list.map(qrow).join('')}<div class="small sub" style="margin-top:8px">3つすべて達成で +${CONFIG.xp.quest_all_bonus} XP${q.allBonus?'（獲得済み）':''}・毎日${CONFIG.quest.reset_hour}時に更新${Settings.get().light?'・軽いモード':''}</div></div>
@@ -1313,7 +1342,10 @@ function vSettings(){
   <div class="section">判定</div><div class="card">
     ${sel('route','音を聞く方法',Object.entries(ROUTES))}${sel('input','判定のしかた',[['mic','マイクで音を聞き取る'],['tap','画面をタップする']])}
     <div class="set"><div><div>遅延キャリブレーション</div><div class="small sub num">${c.assumed?'未測定（推定 '+c.offset+'ms）':c.offset+'ms・ばらつき'+c.std+'ms'}</div></div><button class="btn" data-act="go" data-to="calib">測り直す</button></div>
-    ${sel('gate','発音を検出する大きさ',[[6,'小さな音も拾う（+6dB）'],[9,'やや敏感（+9dB）'],[12,'標準（+12dB）'],[15,'やや鈍い（+15dB）'],[18,'大きな音だけ（+18dB）']])}
+    ${sel('pickup','ギターの音',[['amp','アンプやオーディオIFから鳴らす'],['unplugged','アンプなし（生音）']])}
+    <div class="set"><div><div>音の聞き取り</div><div class="small sub">${s.levelAt?(s.pickup==='unplugged'?`アンプなし・入力+${s.inGain}dB`:'アンプあり')+`・周りの音との差 ${s.levelSnr}dB`:'未測定'}</div></div><button class="btn" data-act="go" data-to="level">合わせる</button></div>
+    ${s.pickup==='unplugged'?sel('inGain','入力の増幅',[...Array(13)].map((_,i)=>[i*3,i?`+${i*3}dB`:'なし'])):''}
+    ${sel(s.pickup==='unplugged'?'gateU':'gate','発音を検出する大きさ',[[6,'小さな音も拾う（+6dB）'],[9,'やや敏感（+9dB）'],[12,'標準（+12dB）'],[15,'やや鈍い（+15dB）'],[18,'大きな音だけ（+18dB）']])}
     ${sw('click','プレイ中にクリックを鳴らす','拍がわかりやすくなります')}
     <div class="set"><label for="vol">伴奏の音量</label><input id="vol" type="range" min="0" max="1" step="0.05" value="${s.volume}" style="width:50%;accent-color:var(--accent)" data-act="setVol"></div></div>
   <div class="section">表示</div><div class="card">
@@ -1324,6 +1356,96 @@ function vSettings(){
     <div class="set"><span>進捗の保存先</span><span class="sub">${Sync.status==='synced'?'アカウント':'この端末'}</span></div>
     <div class="set"><div><div>進捗を消す</div><div class="small sub">★、XP、苦手カードがすべて消えます</div></div><button class="btn" data-act="resetAsk">消す</button></div></div>`;
 }
+/* ========== ギターの音の聞き取りチェック ========== */
+const LevelCheck={phase:'idle',err:null,result:null,amb:[],segs:[],cur:null,floor:null,ambient:-90,t0:0,raf:0,db:-100,test:{n:0,note:''},_on:null,
+  async run(){
+    this.stop();this.err=null;this.result=null;
+    const ok=await Mic.start();if(!ok){this.err=[Mic.error,Mic.hint].filter(Boolean).join('。');render();return;}
+    Mic.wire(Mic._src,Mic.node,{mode:'unplugged',gain:0});
+    this.amb=[];this.segs=[];this.cur=null;this.floor=null;this.phase='ambient';this.t0=performance.now();
+    Mic.tap=db=>this.onHop(db);this.paint();render();
+  },
+  onHop(db){
+    this.db=db;const now=performance.now();
+    if(this.phase==='ambient'){this.amb.push(db);
+      if(now-this.t0>1500){const a=[...this.amb].sort((x,y)=>x-y);this.ambient=a[Math.floor(a.length/2)];this.phase='pluck';this.t0=now;this.floor=db;render();}}
+    else if(this.phase==='pluck'){
+      if(this.cur){this.cur.peak=Math.max(this.cur.peak,db);if(now-this.cur.t>150){this.segs.push(this.cur.peak);this.cur=null;this.floor=db;render();}}
+      else{this.floor=Math.min(this.floor,db);if(db>this.ambient+6&&db>this.floor+6)this.cur={t:now,peak:db};}
+      if(this.segs.length>=4||now-this.t0>10000)this.finish();}
+    else if(this.phase==='test'||this.phase==='testWait'){}
+  },
+  finish(){
+    Mic.tap=db=>{this.db=db;};
+    const pk=[...this.segs].sort((a,b)=>a-b),pluck=pk.length?pk[Math.floor(pk.length/2)]:null,amb=this.ambient;
+    const res={ambient:amb,pluck,count:pk.length,snr:pluck==null?null:pluck-amb};
+    res.grade=pluck==null||res.snr<6?'none':res.snr<12?'low':res.snr<20?'ok':'good';
+    if(pluck!=null){
+      if(pluck>=-50){res.mode='amp';Settings.set('pickup','amp');}
+      else{res.mode='unplugged';res.gain=clamp(Math.round(Math.min(-24-pluck,-30-amb)/3)*3,0,36);res.gate=clamp(Math.round(res.snr*0.5/3)*3,6,18);
+        Settings.set('inGain',res.gain);Settings.set('gateU',res.gate);Settings.set('pickup','unplugged');}
+      Settings.set('levelAt',Date.now());Settings.set('levelSnr',Math.round(res.snr));}
+    else Mic.setInput();
+    this.result=res;this.phase='done';render();
+  },
+  async startTest(){
+    Mic.setInput();this.test={n:0,note:''};this.phase='testWait';Mic.tap=db=>{this.db=db;};render();this.paint();
+    await Mic.measureAmbient(1000);if(this.phase!=='testWait')return;
+    this.phase='test';render();
+    Mic.listeners.add(this._on||(this._on=ev=>{if(this.phase!=='test')return;this.test.n++;
+      Mic.request(ev.idx+Math.round(0.035*Mic.sr),2048,seg=>{const r=yin(seg,Mic.sr,CONFIG.detect.yin_threshold);this.test.note=r.freq>0?midiName(Math.round(69+12*Math.log2(r.freq/440))):'?';const a=$('#lvNote'),b=$('#lvCount');if(a)a.textContent=this.test.note;if(b)b.textContent=this.test.n;});
+      const b=$('#lvCount');if(b)b.textContent=this.test.n;}));
+  },
+  paint(){
+    cancelAnimationFrame(this.raf);
+    const pos=db=>clamp((db+90)/80*100,0,100)+'%';
+    const step=()=>{if(this.phase==='idle'||this.phase==='done'&&!Mic.tap){return;}this.raf=requestAnimationFrame(step);
+      const bar=$('#lmBar'),am=$('#lmAmb'),th=$('#lmThr');if(!bar)return;bar.style.width=pos(this.db);
+      const testing=this.phase==='test'||this.phase==='testWait';
+      const done=this.phase==='done',ga=done&&Mic.mode==='unplugged'?Mic.gainDb:0;const a=testing?Mic.det.ambientDb:this.ambient+ga,t=testing?Mic.det.ambientDb+Mic.det.gateDb:done?a+micGate():this.ambient+6;
+      const showA=this.phase!=='ambient';am.style.display=showA?'block':'none';th.style.display=showA&&this.phase!=='testWait'?'block':'none';am.style.left=pos(a);th.style.left=pos(t);};
+    this.raf=requestAnimationFrame(step);
+  },
+  stop(){
+    cancelAnimationFrame(this.raf);Mic.tap=null;if(this._on)Mic.listeners.delete(this._on);
+    this.phase='idle';if(Mic.ok)Mic.setInput();
+  }
+};
+function vLevel(ob){
+  const s=Settings.get(),L=LevelCheck,R=L.result,ph=L.phase;
+  const head=ob?`<div class="ob">${steps(3)}<h1>ギターの音を聞き取れるか確かめます</h1>`:`${backBar('settings','音の聞き取り')}`;
+  const intro=`<p class="sub">アンプにつながずに弾くと音が小さく、マイクで聞き取りにくくなります。周りの静かさとギターの音の大きさを測って、聞き取りの設定を自動で合わせます。</p>`;
+  const tips=`<div class="card"><div class="section" style="margin-top:0">スマホの置き方</div><ul class="tips">
+    <li>ギターから20〜30cm以内に置き、マイク（画面の下側）を弦に向ける</li>
+    <li>エレキは弦の真ん中よりブリッジ寄り、アコギはサウンドホールの近くに向ける</li>
+    <li>伴奏はイヤホンで聞く（スピーカーの音を拾うと判定がずれます）</li>
+    <li>エアコンや換気扇など、続く音が少ない場所で弾く</li></ul></div>`;
+  if(s.input!=='mic')return `${head}${ob?'':intro}<div class="banner"><div><b>画面をタップして判定する設定になっています</b>聞き取りの設定は、マイクで判定するときに使います。</div></div>
+    <button class="btn primary block" style="margin-top:12px" data-act="levelUseMic">${ICON.mic}マイクで判定する</button>${ob?`<div class="grow"></div><button class="btn ghost block" data-act="go" data-to="ob4">次へ</button></div>`:''}`;
+  const meter=`<div class="lmeter" aria-hidden="true"><i id="lmBar"></i><b class="amb" id="lmAmb"></b><b class="thr" id="lmThr"></b></div>
+    <div class="lmkey"><span style="--k:var(--great)">いまの音</span><span style="--k:var(--sub)">周りの音</span><span style="--k:var(--accent)">${ph==='test'?'検出の基準':'弾いた音の目安'}</span></div>`;
+  let body='';
+  if(ph==='idle'&&!R)body=`${L.err?`<div class="banner" style="margin-bottom:12px"><div>${esc(L.err)}</div></div>`:''}<button class="btn primary block" data-act="levelRun">${ICON.mic}測定をはじめる</button>`;
+  if(ph==='ambient')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">弾かずに、そのまま待ってください</p><p class="small sub" style="text-align:center;margin:0">周りの音を測っています</p>`;
+  if(ph==='pluck')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">開放6弦を、いつもの強さで4回弾いてください</p><p class="small sub" style="text-align:center;margin:0">音が少し小さくなってから次を弾きます</p>
+    <div class="calib-dots" style="margin:12px 0 0">${[0,1,2,3].map(i=>`<i class="${i<L.segs.length?'hit':''}"></i>`).join('')}</div>`;
+  if((ph==='done'||ph==='idle')&&R){
+    const G={good:['よく聞き取れています','このまま練習できます。'],ok:['聞き取れています','判定が安定しないときは、スマホをもう少しギターに近づけてください。'],
+      low:['音が小さめです','スマホをギターに近づけるか、少し強めに弾いてください。静かな場所に移ると改善します。'],
+      none:['ギターの音を聞き取れませんでした','スマホをギターから20〜30cm以内に置き、マイクを弦に向けて、もう一度測ってください。']}[R.grade];
+    const f=v=>v==null?'–':`${Math.round(v)} dBFS`;
+    body=`<div class="banner" style="margin-top:12px"><div><b>${G[0]}</b>${G[1]}</div></div>
+      <div class="kv"><span>周りの音</span><b class="num">${f(R.ambient)}</b></div><div class="kv"><span>ギターの音</span><b class="num">${f(R.pluck)}</b></div><div class="kv"><span>差</span><b class="num">${R.snr==null?'–':Math.round(R.snr)+' dB'}</b></div>
+      ${R.mode?`<p class="small sub" style="margin:8px 0 0">${R.mode==='unplugged'?`アンプなしの設定にしました（入力を+${R.gain}dB増幅、ギターの音域だけを聞き取り、検出の基準は+${R.gate}dB）。`:'十分な大きさのため、アンプありの設定のままにしました。'}設定画面で変えられます。</p>`:''}
+      <div class="stack" style="margin-top:12px">${R.mode?`<button class="btn ${ob?'':'primary'} block" data-act="levelTest">試し弾きする</button>`:''}<button class="btn block" data-act="levelRun">もう一度測る</button></div>`;}
+  if(ph==='testWait')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">弾かずに、そのまま待ってください</p>`;
+  if(ph==='test')body=`<p style="text-align:center;font-weight:700;margin:12px 0 4px">弦を1本ずつ弾いてみてください</p><div class="lnote" id="lvNote" aria-live="polite">${esc(L.test.note)}</div>
+    <div class="kv"><span>聞き取れた回数</span><b class="num" id="lvCount">${L.test.n}</b></div><p class="small sub" style="margin:0">弾いても回数が増えないときは、設定画面の「発音を検出する大きさ」を「小さな音も拾う」にしてください。</p>
+    <button class="btn block" style="margin-top:12px" data-act="levelTestEnd">試し弾きを終える</button>`;
+  setTimeout(()=>{if(L.phase!=='idle')L.paint();},0);
+  return `${head}${intro}<div class="card">${meter}${body}</div>${tips}
+    ${ob?`<div class="grow"></div><div class="stack"><button class="btn ${R&&R.mode?'primary':'ghost'} block" data-act="levelNext">${R&&R.mode?'次へ（遅延を合わせる）':'あとで合わせる'}</button></div></div>`:''}`;
+}
 function vCalib(){return `${backBar('settings','遅延キャリブレーション')}<p class="sub">判定のずれが気になるとき、音を聞く方法を変えたときに測り直してください。値は端末と聞く方法ごとに保存します。</p>${calibBlock()}`;}
 
 /* ========== 操作 ========== */
@@ -1333,11 +1455,16 @@ function playWeak(id){const w=P.weak.find(x=>x.id===id);if(!w)return;const st=ST
 const ACT={
   go:d=>go(d.to,d.w?{w:+d.w}:{}),
   obSet:d=>{OB[d.k]=d.v;render();},
-  obMic:async()=>{const ok=await Mic.start();if(ok){Settings.set('input','mic');go('ob4');}else render();},
+  obMic:async()=>{const ok=await Mic.start();if(ok){Settings.set('input','mic');go('obLevel');}else render();},
   obTap:()=>{Settings.set('input','tap');go('ob4');},
   obFinish:()=>finishOnboarding(),
   setRoute:d=>{Settings.set('route',d.v);Calib.result=null;if(Calib.phase==='done')Calib.phase='idle';render();},
   calibRun:()=>Calib.run(),
+  levelRun:()=>LevelCheck.run(),
+  levelTest:()=>LevelCheck.startTest(),
+  levelTestEnd:()=>{LevelCheck.stop();render();},
+  levelNext:()=>{LevelCheck.stop();go('ob4');},
+  levelUseMic:async()=>{const ok=await Mic.start();if(ok){Settings.set('input','mic');Calib.result=null;}else toast([Mic.error,Mic.hint].filter(Boolean).join('。'));render();},
   calibAccept:()=>{Calib.accept();toast('補正値を保存しました');if(/^ob/.test(route.name))finishOnboarding();else go('settings');},
   mapWorld:d=>go('map',{w:+d.w}),
   openStage:d=>{const st=STAGES[d.id];if(!worldUnlocked(st.world)){go('map',{w:st.world});return;}go('stage',{id:d.id});},
@@ -1377,7 +1504,7 @@ function finishOnboarding(){
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.tagName==='SELECT'||el.type==='checkbox'||el.type==='range')return;const f=ACT[el.dataset.act];if(f){e.preventDefault();f(el.dataset,el,e);}});
 document.addEventListener('change',e=>{const el=e.target;const a=el.dataset&&el.dataset.act;if(!a)return;
   if(a==='obSel'){OB[el.dataset.k]=el.value;render();}
-  if(a==='setSel'){const k=el.dataset.k;let v=el.value;if(k==='fs'||k==='gate')v=+v;Settings.set(k,v);if(k==='input'||k==='route')Calib.result=null;if(k==='light'){}render();}
+  if(a==='setSel'){const k=el.dataset.k;let v=el.value;if(k==='fs'||k==='gate'||k==='gateU'||k==='inGain')v=+v;Settings.set(k,v);if(k==='input'||k==='route')Calib.result=null;if(k==='light'){}render();}
   if(a==='setBool'){Settings.set(el.dataset.k,el.checked);}
   if(a==='setVol'){Settings.set('volume',+el.value);}});
 document.addEventListener('pointerdown',e=>{if(e.target.closest('#tapzone'))Calib.tap(e);});
