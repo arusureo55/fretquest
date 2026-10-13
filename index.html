@@ -115,6 +115,13 @@ nav.tabs button[aria-current="page"] svg{color:var(--accent)}
 .node .stars{font-size:.875rem;letter-spacing:1px;line-height:1}
 .node .lbl{font-size:.75rem;color:var(--sub);text-align:center;line-height:1.25;max-width:96px}
 .node.review .disc{border-style:dashed}
+.node.pd{width:84px}
+.node.pd .disc{width:46px;height:46px;border-radius:14px;border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.node.pd .disc svg{width:20px;height:20px}
+.pdcard{display:flex;gap:12px;align-items:flex-start}
+.pdicon{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface2)}
+.pdicon svg{width:22px;height:22px}
+.pdtext{flex:1;min-width:0}
 /* detail */
 .diagrams{display:flex;gap:12px;flex-wrap:wrap}
 .diagram{display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:700}
@@ -188,6 +195,9 @@ label.chk input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
 .calib-dots i.missd{background:var(--miss);border-color:var(--miss)}
 .level{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
 .level i{display:block;height:100%;background:var(--great);width:0}
+.calib-dots{flex-wrap:wrap}
+.calib-dots.many{gap:4px}
+.calib-dots.many i{width:14px;height:14px}
 .lmeter{position:relative;height:18px;border-radius:9px;background:var(--surface2);overflow:hidden;margin:8px 0 4px}
 .lmeter i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--great);border-radius:9px}
 .lmeter b{position:absolute;top:-2px;bottom:-2px;width:3px;border-radius:2px;left:0;display:none}
@@ -279,9 +289,10 @@ const DEFAULT_CONFIG={
   quest:{count:3,reset_hour:4},
   rest:{recommend_minutes_first:15,first_days:14,recommend_minutes:30},
   league:{group_size:30,promote:7,demote:5,tiers:7},
-  calib:{clicks:8,interval_ms:500,max_std_ms:15,bt_perfect_std_ms:20},
-  detect:{onset_db_above_ambient:12,yin_threshold:0.15,pitch_cents:50,chord_match:0.8}
+  calib:{clicks:16,auto_clicks:12,interval_ms:500,max_std_ms:15,max_se_ms:8,min_hits:8,bt_perfect_std_ms:20},
+  detect:{onset_db_above_ambient:12,yin_threshold:0.15,pitch_cents:50,chord_match:0.8,added_ratio:1.2}
 };
+DEFAULT_CONFIG.pd={show_pending:true,disabled_ids:[],weekly_quest:true}; // 名曲ステージ：show_pending は試作中だけ true（権利確認中の曲も表示する）
 let CONFIG=deepMerge(DEFAULT_CONFIG,LS.get('fq.config',null));
 
 function dayKey(t=Date.now()){const d=new Date(t-CONFIG.quest.reset_hour*3600e3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -430,6 +441,120 @@ const DRILLS={
 };
 Object.entries(DRILLS).forEach(([k,d])=>{d.id=k;d.def.id='drill_'+k;d.def.world=d.def.world||1;d.def.t=d.t;d.def.skill='基礎ドリル';});
 
+/* ========== 名曲ステージ（著作権の保護期間が終わった曲。「名曲ステージ仕様書」） ========== */
+/* 名曲台帳。status は「採用可」「検討中」「除外」。採用可の曲だけを配信する。試作中は配信設定 pd.show_pending で検討中の曲も表示する */
+const PD_LEDGER=[
+  {id:'PD-0001',title:'きらきら星',original:'Ah! vous dirai-je, maman',composer:'フランス民謡',life:'',nation:'フランス',first:'18世紀',status:'検討中',note:'伝承曲'},
+  {id:'PD-0002',title:'さくらさくら',original:'',composer:'日本古謡',life:'',nation:'日本',first:'江戸時代',status:'検討中',note:'伝承曲。歌詞は表示しない'},
+  {id:'PD-0003',title:'歓喜の歌（交響曲第9番より）',original:'Ode an die Freude (Sinfonie Nr. 9)',composer:'ベートーヴェン',life:'1770–1827',nation:'ドイツ',first:'1824年初演',status:'検討中',note:'日本語の訳詞は使わない'},
+  {id:'PD-0004',title:'アメイジング・グレイス',original:'Amazing Grace (New Britain)',composer:'アメリカ民謡',life:'',nation:'アメリカ',first:'1830年代',status:'検討中',note:'現代の有名な編曲に似せない'},
+  {id:'PD-0005',title:'聖者の行進',original:'When the Saints Go Marching In',composer:'アメリカ民謡',life:'',nation:'アメリカ',first:'20世紀初頭以前',status:'検討中',note:'伝承曲'},
+  {id:'PD-0006',title:'ふるさと',original:'',composer:'岡野貞一',life:'1878–1941',nation:'日本',first:'1914年',status:'検討中',note:'歌詞は表示しない'},
+  {id:'PD-0007',title:'カノン（コード進行）',original:'Kanon und Gigue in D-Dur',composer:'パッヘルベル',life:'1653–1706',nation:'ドイツ',first:'17世紀',status:'検討中',note:'カノン進行を使ったポップス曲の旋律は使わない'},
+  {id:'PD-0008',title:'メヌエット ト長調',original:'Menuet G-Dur (BWV Anh. 114)',composer:'ペツォールト（伝バッハ）',life:'1677–1733',nation:'ドイツ',first:'1725年',status:'検討中',note:''},
+  {id:'PD-0009',title:'グリーンスリーブス',original:'Greensleeves',composer:'イングランド民謡',life:'',nation:'イングランド',first:'16世紀',status:'検討中',note:'伝承曲'},
+  {id:'PD-0010',title:'子守歌',original:'Wiegenlied Op. 49 Nr. 4',composer:'ブラームス',life:'1833–1897',nation:'ドイツ',first:'1868年',status:'検討中',note:''},
+  {id:'PD-0011',title:'家路（交響曲第9番「新世界より」第2楽章より）',original:'Symphony No. 9 "From the New World", II',composer:'ドヴォルザーク',life:'1841–1904',nation:'チェコ',first:'1893年初演',status:'検討中',note:'歌詞由来の曲名は使わない'},
+  {id:'PD-0012',title:'ジムノペディ第1番',original:'Gymnopédie No. 1',composer:'サティ',life:'1866–1925',nation:'フランス',first:'1888年',status:'検討中',note:'日本は戦時加算を含めて満了'},
+  {id:'PD-0013',title:'ラグリマ（涙）',original:'Lágrima',composer:'タレガ',life:'1852–1909',nation:'スペイン',first:'',status:'検討中',note:''},
+  {id:'PD-0014',title:'ジ・エンターテイナー',original:'The Entertainer',composer:'ジョプリン',life:'1868–1917',nation:'アメリカ',first:'1902年',status:'検討中',note:'1973年の映画用の編曲は使わない'},
+  {id:'PD-0015',title:'組曲「惑星」より木星の中間部',original:'The Planets, Op. 32: IV. Jupiter',composer:'ホルスト',life:'1874–1934',nation:'イギリス',first:'1918年初演',status:'検討中',note:'2003年の日本語詞の曲の編曲は使わない'},
+  {id:'PD-X001',title:'禁じられた遊び（ロマンス）',original:'',composer:'作者不詳とされる',life:'',status:'除外',note:'作曲者を名乗った人がおり、権利の状態を確定できないため'},
+  {id:'PD-X002',title:'ボレロ',original:'Boléro',composer:'ラヴェル',life:'1875–1937',status:'除外',note:'国によって期限の計算が複雑で、共作者をめぐる訴訟もあったため'},
+  {id:'PD-X003',title:'朝日のあたる家',original:'The House of the Rising Sun',composer:'アメリカ民謡',life:'',status:'除外',note:'1960年代にヒットした編曲の権利に触れるおそれがあるため'},
+  {id:'PD-X004',title:'スカボロー・フェア',original:'Scarborough Fair',composer:'イングランド民謡',life:'',status:'除外',note:'1960年代にヒットした編曲の権利に触れるおそれがあるため'}
+];
+/* 曲データ。melody は「音名＋オクターブ:拍数」を並べたもの（r は休符、拍数を省くと1拍、| は小節の区切り）。prog は小節ごとのコード（伴奏のベースにも使う） */
+const PD_SONGS=[
+  {key:'kirakira',rights:'PD-0001',title:'きらきら星',short:'きらきら星',world:1,requires:'w1_s04',bpm:84,time:'4/4',
+   intro:'18世紀のフランスで歌われていた旋律で、モーツァルトの変奏曲の主題としても知られます。1弦と2弦だけで弾ける、やさしいメロディです。',
+   melody:'C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2',
+   prog:['C','C','C','C','G','G','G','G','C','C','C','C'],sections:[['A',1,4],['B',5,8],['C',9,12]],normal:{kind:'chord',pat:[[0,'d'],[2,'d']]}},
+  {key:'sakura',rights:'PD-0002',title:'さくらさくら',short:'さくらさくら',world:1,requires:'w1_s05',bpm:66,time:'4/4',
+   intro:'江戸時代から伝わる日本の古謡です。ゆったりした4分音符と、ところどころの8分音符で、日本らしい響きを味わいます。',
+   melody:'E4 E4 F#4:2 | E4 E4 F#4:2 | E4 F#4 G4 F#4 | E4 F#4:0.5 E4:0.5 C4:2 | B3 G3 B3 C4 | B3 B3:0.5 G3:0.5 F#3:2 | E4 F#4 G4 F#4 | E4 F#4:0.5 E4:0.5 C4:2 | B3 G3 B3 C4 | B3 B3:0.5 G3:0.5 F#3:2 | E4 E4 F#4:2 | E4 E4 F#4:2 | B3 C4 F#4:0.5 E4:0.5 C4 | B3:4',
+   prog:['Em','Em','Em','Em','Em','Em','Am','Am','Em','Em','Em','Em','Em','Em'],sections:[['A',1,6],['B',7,14]],normal:{kind:'chord',pat:[[0,'d'],[2,'d']]}},
+  {key:'joy',rights:'PD-0003',title:'歓喜の歌',short:'歓喜の歌',world:1,requires:'w1_s07',bpm:80,time:'4/4',
+   intro:'ベートーヴェンの交響曲第9番の終楽章で歌われる旋律です。となり合う音へ順に動くので、指の移動が少なく弾きやすい曲です。',
+   melody:'E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | E4:1.5 D4:0.5 D4:2 | E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:0.5 C4:2 | D4 D4 E4 C4 | D4 E4:0.5 F4:0.5 E4 C4 | D4 E4:0.5 F4:0.5 E4 D4 | C4 D4 G3:2 | E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:0.5 C4:2',
+   prog:['C','C','G','G','C','C','C','C','G','G','G','G','C','C','C','C'],sections:[['A',1,8],['B',9,16]],normal:{kind:'chord',pat:[[0,'d'],[2,'d']]}},
+  {key:'amazing',rights:'PD-0004',title:'アメイジング・グレイス',short:'アメイジング・グレイス',world:1,requires:'w1_s10',bpm:84,time:'3/4',
+   intro:'19世紀のアメリカで広まった賛美歌の旋律です。3拍子の流れに乗って、開放弦を多く使って弾きます。',
+   melody:'r:2 D3 | G3:2 B3:0.5 G3:0.5 | B3:2 A3 | G3:2 E3 | D3:2 D3 | G3:2 B3:0.5 G3:0.5 | B3:2 A3 | D4:3 | r:2 B3 | D4:2 B3:0.5 D4:0.5 | B3:2 A3 | G3:2 E3 | D3:2 D3 | G3:2 B3:0.5 G3:0.5 | B3:2 A3 | G3:3',
+   prog:['G','G','G','G','G','G','D','D','G','G','C','C','G','G','G','G'],sections:[['A',1,8],['B',9,16]],normal:{kind:'chord',pat:[[0,'d'],[1,'d'],[2,'d']]}},
+  {key:'saints',rights:'PD-0005',title:'聖者の行進',short:'聖者の行進',world:2,requires:'w2_s07',bpm:100,time:'4/4',
+   intro:'ニューオーリンズのブラスバンドで有名なアメリカの伝承曲です。ふつうの版では、空ピッキングを入れた8ビートで伴奏します。',
+   melody:'r G3 B3 C4 | D4:4 | r G3 B3 C4 | D4:4 | r G3 B3 C4 | D4:2 B3:2 | G3:2 B3:2 | A3:4 | r B3 B3 A3 | G3:3 G3 | B3 D4:2 D4 | C4:4 | r G3 B3 C4 | D4:2 B3:2 | G3:2 A3:2 | G3:4',
+   prog:['G','G','G','G','G','G','D','D','G','G','C','C','G','G','D','G'],sections:[['A',1,8],['B',9,16]],normal:{kind:'chord',pat:[[0,'d'],[0.5,'gu'],[1,'d'],[1.5,'u'],[2,'gd'],[2.5,'u'],[3,'d'],[3.5,'u']]}},
+  {key:'canon',rights:'PD-0007',title:'カノン（コード進行）',short:'カノン',world:3,requires:'w3_s07',bpm:76,time:'4/4',style:'ballad',
+   intro:'パッヘルベルのカノンの、8小節でくり返されるコード進行です。Bmを含むチェンジを、同じ流れの中で何度も練習できます。',
+   prog:['G','D','Em','Bm','C','G','C','D','G','D','Em','Bm','C','G','C','D'],sections:[['A',1,8],['B',9,16]],
+   easySpec:{kind:'chord',pat:[[0,'d'],[2,'d']]},normal:{kind:'chord',pat:[[0,'d'],[1,'d'],[1.5,'u'],[2,'d'],[3,'d'],[3.5,'u']]}},
+  {key:'minuet',rights:'PD-0008',title:'メヌエット ト長調',short:'メヌエット',world:4,requires:'w4_s03',bpm:84,time:'3/4',
+   intro:'かつてバッハの作とされ、いまはペツォールトの作と考えられている舞曲です。1フレット1指の運指で、8分音符をなめらかにつなぎます。',
+   melody:'D4 G3:0.5 A3:0.5 B3:0.5 C4:0.5 | D4 G3 G3 | E4 C4:0.5 D4:0.5 E4:0.5 F#4:0.5 | G4 G3 G3 | C4 D4:0.5 C4:0.5 B3:0.5 A3:0.5 | B3 C4:0.5 B3:0.5 A3:0.5 G3:0.5 | F#3 G3:0.5 A3:0.5 B3:0.5 G3:0.5 | A3:3 | D4 G3:0.5 A3:0.5 B3:0.5 C4:0.5 | D4 G3 G3 | E4 C4:0.5 D4:0.5 E4:0.5 F#4:0.5 | G4 G3 G3 | C4 D4:0.5 C4:0.5 B3:0.5 A3:0.5 | B3 C4:0.5 B3:0.5 A3:0.5 G3:0.5 | A3 B3:0.5 A3:0.5 G3:0.5 F#3:0.5 | G3:3',
+   prog:['G','G','C','G','C','G','D','D','G','G','C','G','C','G','D','G'],sections:[['A',1,8],['B',9,16]],normal:{kind:'arp',order:['B',3,2,1,2,3],step:0.5}},
+  {key:'greensleeves',rights:'PD-0009',title:'グリーンスリーブス',short:'グリーンスリーブス',world:4,requires:'w4_s05',bpm:150,time:'6/8',
+   intro:'16世紀のイングランドから伝わる旋律です。6/8拍子の揺れを感じながら、Amの響きの中でメロディを弾きます。BPMは8分音符で数えます。',
+   melody:'r:5 A3 | C4:2 D4 E4:1.5 F4:0.5 E4 | D4:2 B3 G3:1.5 A3:0.5 B3 | C4:2 A3 A3:1.5 G#3:0.5 A3 | B3:2 G#3 E3:2 A3 | C4:2 D4 E4:1.5 F4:0.5 E4 | D4:2 B3 G3:1.5 A3:0.5 B3 | C4:1.5 B3:0.5 A3 G#3:1.5 F#3:0.5 G#3 | A3:5 A3 | C4:2 D4 E4:1.5 F4:0.5 E4 | D4:2 B3 G3:1.5 A3:0.5 B3 | C4:2 A3 A3:1.5 G#3:0.5 A3 | B3:2 G#3 E3:2 A3 | C4:2 D4 E4:1.5 F4:0.5 E4 | D4:2 B3 G3:1.5 A3:0.5 B3 | C4:1.5 B3:0.5 A3 G#3:1.5 F#3:0.5 G#3 | A3:6',
+   prog:['Am','Am','G','Am','E','Am','G','E','Am','Am','G','Am','E','Am','G','E','Am'],sections:[['A',1,9],['B',10,17]],normal:{kind:'arp',order:['B',3,2,1,2,3],step:1}},
+  {key:'goinghome',rights:'PD-0011',title:'家路',short:'家路',world:4,requires:'w4_s07',bpm:60,time:'4/4',style:'ballad',
+   intro:'ドヴォルザークの交響曲「新世界より」第2楽章の旋律です。ゆっくりしたテンポで、付点のリズムと音の長さを丁寧に弾きます。',
+   melody:'E4:1.5 G4:0.5 G4:2 | E4:1.5 D4:0.5 C4:2 | D4 E4 G4 E4 | D4:4 | E4:1.5 G4:0.5 G4:2 | E4:1.5 D4:0.5 C4:2 | D4 E4 D4:2 | C4:4',
+   prog:['C','C','G','G','C','C','G','C'],sections:[['A',1,4],['B',5,8]],normal:{kind:'arp',order:['B',3,2,1,2,3,2,1],step:0.5}},
+  {key:'gymnopedie',rights:'PD-0012',title:'ジムノペディ第1番',short:'ジムノペディ',world:4,requires:'w4_s09',bpm:72,time:'3/4',
+   intro:'サティが1888年に発表したピアノ曲の、ゆったりした伴奏の響きをギターで弾きます。GとDのメジャーセブンスを交互にアルペジオで鳴らします。',
+   prog:['Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7','Gmaj7','Dmaj7'],sections:[['A',1,8],['B',9,16]],
+   easySpec:{kind:'arp',order:['B',3,2],step:1},normal:{kind:'arp',order:['B',3,2,1,2,3],step:0.5}}
+];
+Object.assign(SHAPES,{'Gmaj7':[2,0,0,0,-1,3],'Dmaj7':[2,2,2,0,-1,-1]});
+const PD_BY_KEY={},PD_VER={};
+function parseMelody(str,meter){
+  const out=[];let pos=0;
+  for(const tok of str.split(/[\s|]+/).filter(Boolean)){
+    const[n,d]=tok.split(':');const dur=d==null?1:+d;
+    if(n!=='r'){const m=n.match(/^([A-G])(#|b)?(\d)$/);const pc={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0);const bar=Math.floor(pos/meter+1e-9);out.push({bar,beat:pos-bar*meter,midi:12*(+m[3]+1)+pc});}
+    pos+=dur;}
+  return{notes:out,total:pos};
+}
+/* 低いフレットで押さえられる弦を選ぶ（W1〜W4は5フレット、W5は8フレットまで） */
+function fretFor(midi,maxFret){let best=null;for(let s=1;s<=6;s++){const f=midi-OPEN[s];if(f<0||f>maxFret)continue;if(!best||f<best.fret)best={string:s,fret:f};}return best;}
+PD_SONGS.forEach(s=>{
+  s.meter=+s.time.split('/')[0];s.bars=s.prog.length;const maxFret=s.world>=5?8:5;
+  const base={world:s.world,bpm:s.bpm,meter:s.meter,fixedBars:s.bars,prog:s.prog,per:1,pdKey:s.key,style:s.style};
+  if(s.melody){const r=parseMelody(s.melody,s.meter);s.melodyBeats=r.total;s.score=r.notes.map(n=>({...fretFor(n.midi,maxFret),bar:n.bar,beat:n.beat}));}
+  const mk=(ver,spec)=>{const d={...base,...spec,id:`pd_${s.key}_${ver}`,version:ver,t:`${s.title}（${ver==='easy'?'やさしい':'ふつう'}）`,skill:ver==='easy'&&s.melody?'名曲：メロディ':'名曲：伴奏'};if(d.kind==='score')d.score=s.score;PD_VER[d.id]=d;return d;};
+  s.easy=mk('easy',s.melody?{kind:'score'}:s.easySpec);
+  s.normal=s.normal?mk('normal',s.normal):null;
+  PD_BY_KEY[s.key]=s;
+});
+function pdLedger(s){return PD_LEDGER.find(x=>x.id===s.rights)||{};}
+function pdVisible(s){const L=pdLedger(s),C=CONFIG.pd||{};if((C.disabled_ids||[]).includes(s.rights))return false;return L.status==='採用可'||(L.status==='検討中'&&!!C.show_pending);}
+function pdUnlocked(s){return worldUnlocked(s.world)&&(P.stars[s.requires]||0)>=1;}
+function pdNormalUnlocked(s){return!!s.normal&&(P.stars[s.easy.id]||0)>=1;}
+function pdStars(s){return Math.max(P.stars[s.easy.id]||0,s.normal?(P.stars[s.normal.id]||0):0);}
+function pdCleared(){return PD_SONGS.filter(s=>pdStars(s)>=1).length;}
+function pdCredit(s){const L=pdLedger(s);return `作曲：${L.composer||''}${L.life?`（${L.life}）`:''}　編曲：FretQuest`;}
+/* 区間練習用：指定した小節だけを取り出した譜面 */
+function buildSectionChart(def,speed,from,to){
+  const full=buildChart(def,speed);const{barMs}=full;const off=(from-1)*barMs;
+  const notes=full.notes.filter(n=>n.bar>=from&&n.bar<=to).map(n=>{const c=clone(n);c.t-=off;c.bar-=from-1;c.judged=null;c.claimed=false;return c;});
+  const ghosts=full.ghosts.filter(g=>g.t>=from*barMs&&g.t<(to+1)*barMs).map(g=>({t:g.t-off,dir:g.dir}));const bars=to-from+1;
+  return{...full,bars,notes,ghosts,barChords:[null,...full.barChords.slice(from,to+1)],endMs:barMs*(bars+1)+1200};
+}
+/* 週に1回（月曜）、3つ目の基礎ドリルを名曲に置き換える */
+function pdWeeklyQuest(list,today,light){
+  if(!(CONFIG.pd||{}).weekly_quest)return;const[y,m,d]=today.split('-').map(Number);if(new Date(y,m-1,d,12).getDay()!==1)return;
+  const cand=PD_SONGS.filter(s=>pdVisible(s)&&pdUnlocked(s)&&(!light||s.melody));if(!cand.length)return;
+  const i=Math.min(2,list.length);if(list[i]&&list[i].kind!=='drill')return;const s=cand[hashStr(today)%cand.length];
+  list[i]={kind:'pd',ref:s.easy.id,label:`名曲を弾く：${s.title}`,done:false};
+}
+function playPd(id,sec,speed){
+  const def=PD_VER[id];if(!def)return;const s=PD_BY_KEY[def.pdKey];const sp=speed||P.speed[id]||100;const S=sec?s.sections.find(x=>x[0]===sec):null;
+  const meta={mode:'pd',stageId:id,pdKey:s.key,version:def.version,section:S?S[0]:null,title:`${def.t}${S?`・区間${S[0]}`:''}`,back:'pdlist',rebuild:()=>S?buildSectionChart(def,sp,S[1],S[2]):buildChart(def,sp)};
+  Play.start(meta.rebuild(),meta);
+}
+
 /* ========== 譜面の生成（「6. サウンド・譜面」3章の形式） ========== */
 function barEvents(def,b,rnd,st){
   const ev=[];let chord=null;
@@ -440,9 +565,10 @@ function barEvents(def,b,rnd,st){
     case 'single':chord=bassAt();singleEvents();break;
     case 'chord':chord=def.prog[Math.floor(b/def.per)%def.prog.length];chordEvents(chord);break;
     case 'mix':chord=def.prog[Math.floor(b/def.per)%def.prog.length];if(b%2===0)chordEvents(chord);else singleEvents();break;
-    case 'arp':{chord=def.prog[Math.floor(b/def.per)%def.prog.length];const info=chordInfo(chord);const bassS=Math.max(...info.strings);const n=Math.round(4/def.step);
+    case 'arp':{chord=def.prog[Math.floor(b/def.per)%def.prog.length];const info=chordInfo(chord);const bassS=Math.max(...info.strings);const n=Math.round((def.meter||4)/def.step);
       for(let k=0;k<n;k++){const o=def.order[k%def.order.length];const s=o==='B'?bassS:o;if(!info.strings.includes(s))continue;ev.push({beat:k*def.step,type:'single',string:s,fret:SHAPES[chord][s-1],chord});}break;}
-    case 'seq':{chord=bassAt();const n=Math.round(4/def.step);for(let k=0;k<n;k++){const[s,f,tech,to]=def.seq[st.i++%def.seq.length];ev.push({beat:k*def.step,type:'single',string:s,fret:f,tech,to});}break;}
+    case 'seq':{chord=bassAt();const n=Math.round((def.meter||4)/def.step);for(let k=0;k<n;k++){const[s,f,tech,to]=def.seq[st.i++%def.seq.length];ev.push({beat:k*def.step,type:'single',string:s,fret:f,tech,to});}break;}
+    case 'score':chord=def.prog[b%def.prog.length];for(const n of def.score)if(n.bar===b)ev.push({beat:n.beat,type:'single',string:n.string,fret:n.fret});break;
     case 'phrase':{chord=bassAt();const ph=def.phrases[b%def.phrases.length];for(const[bt,s,f,tech,to]of ph)ev.push({beat:bt,type:'single',string:s,fret:f,tech,to});break;}
   }
   return{ev,chord};
@@ -453,15 +579,15 @@ function finalizeNote(n){
   n.judged=null;n.claimed=false;return n;
 }
 function buildChart(def,speed=100,opt={}){
-  const bpm=def.bpm*speed/100,beatMs=60000/bpm,barMs=beatMs*4,baseBar=240000/def.bpm;
-  const bars=opt.bars||(def.boss?Math.ceil(90000/baseBar/4)*4:Math.max(8,Math.ceil(30000/baseBar/4)*4));
+  const METER=def.meter||4,bpm=def.bpm*speed/100,beatMs=60000/bpm,barMs=beatMs*METER,baseBar=60000*METER/def.bpm;
+  const bars=opt.bars||def.fixedBars||(def.boss?Math.ceil(90000/baseBar/4)*4:Math.max(8,Math.ceil(30000/baseBar/4)*4));
   const rnd=prng(hashStr(def.id||'x'));const st={i:0,last:-1};
   const notes=[],ghosts=[],barChords=[null];const minGap=(def.world>=4?150:200);let lastT=-1e9;
   for(let b=0;b<bars;b++){
     const{ev,chord}=barEvents(def,b,rnd,st);barChords.push(chord);
     for(const e of ev){const t=barMs*(b+1)+e.beat*beatMs;if(e.ghost){ghosts.push({t,dir:e.dir});continue;}if(t-lastT<minGap)continue;lastT=t;notes.push(finalizeNote({...e,t,bar:b+1}));}
   }
-  return{id:def.id,def,speed,bpm,beatMs,barMs,bars,notes,ghosts,barChords,endMs:barMs*(bars+1)+1200,world:def.world||1};
+  return{id:def.id,def,speed,bpm,beatMs,barMs,bars,notes,ghosts,barChords,endMs:barMs*(bars+1)+1200,world:def.world||1,meter:METER};
 }
 /* 苦手カード用：1小節を4回くり返す譜面 */
 function buildBarChart(def,speed,bar,reps=4){
@@ -535,6 +661,15 @@ class OnsetDetector{
     this.prevFlux=flux;if(on)this.last=idx;return on;
   }
 }
+/* 弾く直前の音を引いた「新しく増えた音」で、期待する音（音名）がほかの音名より強く合うかを調べる。鳴り続ける弦の影響を除くため */
+function spectrumOf(seg,fft){const n=fft.n,re=new Float32Array(n),im=new Float32Array(n);const L=Math.min(n,seg.length);for(let i=0;i<L;i++)re[i]=seg[i]*fft.win[i];fft(re,im);const m=new Float32Array(n/2);for(let k=0;k<n/2;k++)m[k]=Math.hypot(re[k],im[k]);return m;}
+function addedPitchOk(pre,post,sr,midis,fft,ratio){
+  const n=fft.n,a=spectrumOf(pre,fft),b=spectrumOf(post,fft),add=new Float32Array(n/2);for(let k=0;k<n/2;k++)add[k]=Math.max(0,b[k]-a[k]);
+  const score=m=>{const f0=440*2**((m-69)/12);let s=0;for(let h=1;h<=6;h++){const f=f0*h;if(f>4000)break;const k0=Math.max(1,Math.floor(f*2**(-0.5/12)*n/sr)),k1=Math.min(n/2-1,Math.ceil(f*2**(0.5/12)*n/sr));let mx=0;for(let k=k0;k<=k1;k++)if(add[k]>mx)mx=add[k];s+=mx/Math.sqrt(h);}return s;};
+  const pcs=midis.map(m=>((m%12)+12)%12);let want=0,other=0;
+  for(let m=36;m<=96;m++){const s=score(m);if(pcs.includes(m%12)){if(s>want)want=s;}else if(s>other)other=s;}
+  return want>0&&want>other*ratio;
+}
 /* ========== DSP_END ========== */
 
 /* ========== 音の再生（伴奏・クリック・見本） ========== */
@@ -568,6 +703,7 @@ const A={
   pluck(t,m,v=1,out){const c=this.ctx,s=c.createBufferSource(),g=c.createGain();s.buffer=this.pluckBuf(m);g.gain.value=0.5*v;s.connect(g).connect(out||this.master);s.start(t);return s;},
   /* 伴奏のイベント列（利用者が弾くギターパートは入れない） */
   backingEvents(chart,withClick){
+    if((chart.meter||4)!==4)return this.backingMeter(chart,withClick);
     const ev=[],{beatMs,barMs,bars}=chart;const ballad=chart.def.style==='ballad';
     for(let k=0;k<4;k++)ev.push({t:k*beatMs,k:'click',acc:k===0,count:4-k});
     for(let b=1;b<=bars;b++){const t0=b*barMs,root=rootMidi(chart.barChords[b]);
@@ -575,6 +711,19 @@ const A={
       else{for(let k=0;k<8;k++)ev.push({t:t0+k*beatMs/2,k:'hat',v:k%2?0.55:0.9});ev.push({t:t0,k:'kick'},{t:t0+2*beatMs,k:'kick'},{t:t0+beatMs,k:'snare'},{t:t0+3*beatMs,k:'snare'});
         if(root!=null){ev.push({t:t0,k:'bass',m:root,d:beatMs*1.8/1000},{t:t0+2*beatMs,k:'bass',m:root,d:beatMs*1.8/1000});}}
       if(withClick)for(let k=0;k<4;k++)ev.push({t:t0+k*beatMs,k:'click',acc:false,soft:true});
+    }
+    const end=(bars+1)*barMs,lr=rootMidi(chart.barChords[bars]);ev.push({t:end,k:'kick'});if(lr!=null)ev.push({t:end,k:'bass',m:lr,d:1.2});
+    return ev.sort((a,b)=>a.t-b.t);
+  },
+  /* 3/4・6/8 拍子の伴奏（名曲ステージ。ドラムとベースだけ） */
+  backingMeter(chart,withClick){
+    const ev=[],{beatMs,barMs,bars}=chart,M=chart.meter;
+    for(let k=0;k<M;k++)ev.push({t:k*beatMs,k:'click',acc:k===0,count:M-k});
+    for(let b=1;b<=bars;b++){const t0=b*barMs,root=rootMidi(chart.barChords[b]);
+      if(M===6){ev.push({t:t0,k:'kick',v:0.8},{t:t0+3*beatMs,k:'snare',v:0.45});for(let k=0;k<6;k++)ev.push({t:t0+k*beatMs,k:'hat',v:k%3?0.45:0.8});
+        if(root!=null)ev.push({t:t0,k:'bass',m:root,d:beatMs*2.8/1000},{t:t0+3*beatMs,k:'bass',m:root,d:beatMs*2.8/1000});}
+      else{ev.push({t:t0,k:'kick',v:0.8});for(let k=1;k<M;k++)ev.push({t:t0+k*beatMs,k:'hat',v:0.6});if(root!=null)ev.push({t:t0,k:'bass',m:root,d:barMs*0.9/1000});}
+      if(withClick)for(let k=0;k<M;k++)ev.push({t:t0+k*beatMs,k:'click',acc:false,soft:true});
     }
     const end=(bars+1)*barMs,lr=rootMidi(chart.barChords[bars]);ev.push({t:end,k:'kick'});if(lr!=null)ev.push({t:end,k:'bass',m:lr,d:1.2});
     return ev.sort((a,b)=>a.t-b.t);
@@ -634,7 +783,7 @@ const Mic={
     const pre=this.support();if(pre)return this.fail(pre);
     try{
       const speaker=Settings.get().route==='speaker';
-      try{this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:speaker,noiseSuppression:false,autoGainControl:false,channelCount:1}});}
+      try{this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:speaker&&!this.noEcho,noiseSuppression:false,autoGainControl:false,channelCount:1}});}
       catch(e1){if(e1&&e1.name==='OverconstrainedError')this.stream=await navigator.mediaDevices.getUserMedia({audio:true});else throw e1;}
     }catch(e){const n=e&&e.name;
       if(n==='NotAllowedError'||n==='SecurityError')return this.fail(window.self!==window.top?'policy':'denied');
@@ -659,7 +808,7 @@ const Mic={
         if(this.tap)this.tap(this.det.db);
         if(on&&active){const ev={idx,time:this.timeOf(idx),db:this.det.db};for(const fn of this.listeners)fn(ev);}}
       this.nextHop+=128;}
-    if(this.reqs.length){const keep=[];for(const q of this.reqs){if(this.pos>=q.start+q.len){const seg=new Float32Array(q.len);for(let i=0;i<q.len;i++)seg[i]=r[(q.start+i)&m];q.cb(seg);}else keep.push(q);}this.reqs=keep;}
+    if(this.reqs.length){const all=this.reqs,keep=[];this.reqs=[];for(const q of all){if(this.pos>=q.start+q.len){const seg=new Float32Array(q.len);for(let i=0;i<q.len;i++)seg[i]=r[(q.start+i)&m];q.cb(seg);}else keep.push(q);}this.reqs=keep.concat(this.reqs);}
   },
   timeOf(idx){return this.anchor+idx/this.sr;},
   request(start,len,cb){this.reqs.push({start,len,cb});},
@@ -682,10 +831,17 @@ const Mic={
     if(this.det)this.det.minGapS=mode==='unplugged'?0.12:0.07;
   },
   setInput(){if(this.ok&&this._src&&this.node)this.wire(this._src,this.node);},
+  /* マイクを閉じて開き直す（自動キャリブレーションではエコー除去を外す） */
+  noEcho:false,
+  close(){try{if(this.stream)this.stream.getTracks().forEach(t=>t.stop());}catch(e){}try{if(this.node)this.node.disconnect();if(this._src)this._src.disconnect();}catch(e){}this.ok=false;},
+  async reopen(noEcho){this.noEcho=!!noEcho;this.close();return this.start();},
   /* 音の判定：単音はYIN、和音はクロマ */
   checkNote(ev,note,cb){
     const sr=this.sr;
-    if(note.type==='single'){this.request(ev.idx+Math.round(0.035*sr),2048,seg=>{const r=yin(seg,sr,CONFIG.detect.yin_threshold);const ok=(r.freq>0&&note.alts.some(mm=>pcDistanceCents(r.freq,mm)<=CONFIG.detect.pitch_cents))||yinHasPitch(seg,sr,note.alts,0.5,CONFIG.detect.pitch_cents);cb(ok,r.freq?midiName(Math.round(69+12*Math.log2(r.freq/440))):'?');});}
+    if(note.type==='single'){this.request(ev.idx+Math.round(0.035*sr),2048,seg=>{const r=yin(seg,sr,CONFIG.detect.yin_threshold);const ok=(r.freq>0&&note.alts.some(mm=>pcDistanceCents(r.freq,mm)<=CONFIG.detect.pitch_cents))||yinHasPitch(seg,sr,note.alts,0.5,CONFIG.detect.pitch_cents);const nm=r.freq?midiName(Math.round(69+12*Math.log2(r.freq/440))):'?';
+      if(ok){cb(true,nm);return;}
+      const N=4096,d1=Math.round(0.01*sr),d2=Math.round(0.02*sr);if(!this.fft4k)this.fft4k=makeFFT(N);
+      this.request(ev.idx-d1-N,N+d1+d2+N,all=>{cb(addedPitchOk(all.subarray(0,N),all.subarray(N+d1+d2),sr,note.alts,this.fft4k,CONFIG.detect.added_ratio),nm);});});}
     else if(note.type==='chord'){this.request(ev.idx+Math.round(0.05*sr),Math.round(0.17*sr),seg=>{const ch=chromaOf(seg,sr,this.fft8k);cb(chordMatch(ch,note.pcs)>=CONFIG.detect.chord_match,'');});}
     else cb(true,'');
   }
@@ -709,6 +865,8 @@ function calibKey(){const s=Settings.get();return s.route+'|'+s.input;}
 function getCalib(){const c=LS.get('fq.calib',{})[calibKey()];if(c)return c;const s=Settings.get();
   let lat=60;try{if(A.ctx)lat=((A.ctx.outputLatency||0)+(A.ctx.baseLatency||0))*1000+(s.input==='mic'?25:0);}catch(e){}
   if(s.route==='bluetooth')lat+=150;return{offset:Math.round(lat),std:null,assumed:true};}
+/* 補正値の誤差。新しい測り方では中央値の標準誤差、古い値ではばらつき */
+function calibErr(c){return c?(c.se!=null?c.se:c.std):null;}
 function saveCalib(v){const all=LS.get('fq.calib',{});all[calibKey()]=v;LS.set('fq.calib',all);}
 
 /* ========== 進捗データ（端末内保存＋サーバー同期） ========== */
@@ -783,7 +941,7 @@ function registerWeak(stageId,bar,speed){
   if(P.weak.length>=W.max_cards)return'full';
   P.weak.push({id:rid(),stageId,bar,speed,createdAt:now,due:addDays(dayKey(),W.intervals_days[0]),passes:0,updatedAt:now});return'new';
 }
-function weakLabel(w){const st=STAGES[w.stageId];return st?`${st.world}-${st.no}「${st.t}」${w.bar}小節目`:'';}
+function weakLabel(w){const st=STAGES[w.stageId];if(!st&&PD_VER[w.stageId])return `名曲「${PD_VER[w.stageId].t}」${w.bar}小節目`;return st?`${st.world}-${st.no}「${st.t}」${w.bar}小節目`:'';}
 
 /* ========== デイリークエスト（「4. ゲームデザイン」4章） ========== */
 function ensureQuests(){
@@ -803,12 +961,13 @@ function ensureQuests(){
     else{const d=pickDrill(()=>true);list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}
     const d=pickDrill(()=>true);if(d){list.push({kind:'drill',ref:d.id,label:d.t,done:false});P.drillHist[d.id]=today;}
   }
+  pdWeeklyQuest(list,today,s.light);
   P.quests={day:today,list:list.slice(0,CONFIG.quest.count),allBonus:false};save();return P.quests;
 }
 function questProgress(meta,stars){
   const q=ensureQuests(),done=[];
   for(const x of q.list){if(x.done)continue;
-    if((x.kind==='weak'&&meta.mode==='weak'&&meta.cardId===x.ref)||(x.kind==='stage'&&meta.mode==='stage'&&meta.stageId===x.ref)||(x.kind==='clear'&&meta.mode==='stage'&&meta.stageId===x.ref&&stars>=1)||(x.kind==='drill'&&meta.mode==='drill'&&meta.drillId===x.ref)){
+    if((x.kind==='weak'&&meta.mode==='weak'&&meta.cardId===x.ref)||(x.kind==='stage'&&meta.mode==='stage'&&meta.stageId===x.ref)||(x.kind==='clear'&&meta.mode==='stage'&&meta.stageId===x.ref&&stars>=1)||(x.kind==='drill'&&meta.mode==='drill'&&meta.drillId===x.ref)||(x.kind==='pd'&&meta.mode==='pd'&&!meta.section&&PD_VER[x.ref]&&meta.pdKey===PD_VER[x.ref].pdKey)){
       x.done=true;addXP(CONFIG.xp.quest,'quest');done.push({label:x.label,xp:CONFIG.xp.quest});}}
   if(!q.allBonus&&q.list.length&&q.list.every(x=>x.done)){q.allBonus=true;addXP(CONFIG.xp.quest_all_bonus,'quest_all');done.push({label:'3つすべて達成',xp:CONFIG.xp.quest_all_bonus});}
   return done;
@@ -829,7 +988,8 @@ function badges(){
     {b:'1',t:'はじめての★',on:Object.values(P.stars).some(v=>v>0)},
     {b:'3日',t:'3日連続',on:st>=3},{b:'7日',t:'7日連続',on:st>=7},
     {b:'50',t:'50コンボ',on:(P.maxCombo||0)>=50},{b:'★3',t:'★3を10ステージ',on:three>=10},{b:'Lv10',t:'レベル10',on:lv>=10},
-    ...WORLDS.map((w,i)=>({b:'W'+(i+1),t:w.name+'のボス',on:cleared(i+1)}))
+    ...WORLDS.map((w,i)=>({b:'W'+(i+1),t:w.name+'のボス',on:cleared(i+1)})),
+    ...[[1,'名曲を1曲'],[5,'名曲を5曲'],[15,'名曲を15曲']].map(([n,t])=>({b:'♪'+n,t,on:pdCleared()>=n}))
   ];
 }
 
@@ -889,21 +1049,21 @@ const Play={
   hit(t,ev){
     const good=this.cfg.judge.good_ms;let best=null,bd=1e9;
     for(const n of this.chart.notes){if(n.t>t+good)break;if(n.judged||n.claimed)continue;const d=Math.abs(t-n.t);if(d<=good&&d<bd){bd=d;best=n;}}
-    if(!best){this.stray++;return;}
+    if(!best){this.stray++;let nn=null,nd=1e9;for(const n of this.chart.notes){if(n.judged)continue;const d=Math.abs(t-n.t);if(d<=250&&d<nd){nd=d;nn=n;}}if(nn)nn.offMiss=t-nn.t;return;}
     if(!ev||best.type==='mute'){this.judge(best,t-best.t);return;}
     best.claimed=true;const ep=this.epoch;
-    Mic.checkNote(ev,best,ok=>{if(ep!==this.epoch)return;best.claimed=false;if(best.judged)return;if(ok)this.judge(best,t-best.t);else best.wrong=(best.wrong||0)+1;});
+    Mic.checkNote(ev,best,(ok,nm)=>{if(ep!==this.epoch)return;best.claimed=false;if(best.judged)return;if(ok)this.judge(best,t-best.t);else{best.wrong=(best.wrong||0)+1;best.heard=nm;}});
   },
   judge(n,off){
     const J=this.cfg.judge;let g='miss';
     if(off!=null){const a=Math.abs(off);g=a<=J.perfect_ms?'perfect':a<=J.great_ms?'great':a<=J.good_ms?'good':'miss';}
-    if(g==='perfect'&&this.route==='bluetooth'&&this.cal.std!=null&&this.cal.std>this.cfg.calib.bt_perfect_std_ms)g='great';
+    if(g==='perfect'&&this.route==='bluetooth'&&calibErr(this.cal)!=null&&calibErr(this.cal)>this.cfg.calib.bt_perfect_std_ms)g='great';
     n.judged=g;n.off=off;n.jt=performance.now();
     const base=this.cfg.score[g];this.sumBase+=base;this.counts[g]++;
     if(g==='miss'){this.combo=0;if(n.wrong)this.wrong++;}else{this.combo++;this.maxCombo=Math.max(this.maxCombo,this.combo);this.offsets.push(off);}
     const C=this.cfg.combo;const mult=Math.min(1+C.step_rate*Math.floor(this.combo/C.step_notes),C.max_mult);this.score+=base*mult;
     if(this.combo>0&&this.combo%C.step_notes===0)this.comboFlash=performance.now();
-    this.effects.push({n,g,t0:performance.now()});this.updateHUD();
+    this.effects.push({n,g,t0:performance.now(),why:g==='miss'?missWhy(n,this.input):''});this.updateHUD();
   },
   accNow(){const n=this.counts.perfect+this.counts.great+this.counts.good+this.counts.miss;return n?this.sumBase/(100*n)*100:null;},
   updateHUD(){$('#hScore').textContent=Math.round(this.score||0).toLocaleString();$('#hCombo').textContent=this.combo||0;const a=this.accNow();$('#hAcc').textContent=a==null?'–':a.toFixed(0)+'%';},
@@ -915,7 +1075,7 @@ const Play={
     if(this.state!=='paused')return;const{barMs,beatMs}=this.chart;let from=0;
     if(this.pauseSong>=barMs)from=Math.max(barMs,Math.floor(this.pauseSong/barMs)*barMs-2*barMs);
     let ev;if(from===0){ev=this.events;this.songStart=A.ctx.currentTime+0.15;this.countFrom=barMs;}
-    else{const clicks=[0,1,2,3].map(k=>({t:from-barMs+k*beatMs,k:'click',acc:k===0}));ev=[...clicks,...this.events.filter(e=>e.t>=from&&!(e.k==='click'&&!e.soft))].sort((a,b)=>a.t-b.t);
+    else{const clicks=[...Array(this.chart.meter||4).keys()].map(k=>({t:from-barMs+k*beatMs,k:'click',acc:k===0}));ev=[...clicks,...this.events.filter(e=>e.t>=from&&!(e.k==='click'&&!e.soft))].sort((a,b)=>a.t-b.t);
       this.songStart=A.ctx.currentTime+0.15-(from-barMs)/1000;this.countFrom=from;}
     this.sch=new Scheduler(ev,this.songStart,from===0?0:from-barMs);this.sch.run();this.overlay(null);this.state='playing';this.segStart=performance.now();
   },
@@ -967,7 +1127,7 @@ const Play={
     const{beatMs,barMs}=this.chart;
     // 拍と小節の線
     const b0=Math.floor((vis-400)/beatMs),b1=Math.ceil((vis+LOOK)/beatMs);
-    for(let b=b0;b<=b1;b++){const x=xOf(b*beatMs);if(x<0||x>W)continue;const isBar=b%4===0;g.strokeStyle=isBar?'rgba(242,242,245,.18)':'rgba(242,242,245,.06)';g.lineWidth=isBar?2:1;g.beginPath();g.moveTo(x,top);g.lineTo(x,bottom);g.stroke();}
+    for(let b=b0;b<=b1;b++){const x=xOf(b*beatMs);if(x<0||x>W)continue;const isBar=b%(this.chart.meter||4)===0;g.strokeStyle=isBar?'rgba(242,242,245,.18)':'rgba(242,242,245,.06)';g.lineWidth=isBar?2:1;g.beginPath();g.moveTo(x,top);g.lineTo(x,bottom);g.stroke();}
     // 弦
     for(let s=1;s<=6;s++){g.strokeStyle=STRING_COLORS[s]+'88';g.lineWidth=1+(s-1)*0.45;g.beginPath();g.moveTo(0,y(s));g.lineTo(W,y(s));g.stroke();
       g.fillStyle=STRING_COLORS[s];g.font='700 12px "Noto Sans JP",sans-serif';g.textAlign=L?'right':'left';g.textBaseline='middle';g.fillText(String(s),L?W-6:6,y(s)-laneH*0.32);}
@@ -999,20 +1159,24 @@ const Play={
     this.effects=this.effects.filter(e=>now-e.t0<JUDGE_STYLE[e.g].dur);
     for(const e of this.effects){const st=JUDGE_STYLE[e.g],p=(now-e.t0)/st.dur,sc=this.calm?1:1+(st.scale-1)*p;const n=e.n;
       const ey=n.type==='single'?y(n.string):n.type==='chord'?(Math.min(...n.strings.map(y))+Math.max(...n.strings.map(y)))/2:top+laneH*3;const ex=hitX-dir*48;
-      g.save();g.translate(ex,ey);g.scale(sc,sc);g.globalAlpha=e.g==='good'||e.g==='miss'?1-p*0.6:1-p*0.8;g.fillStyle=st.color;g.font='900 26px "Noto Sans JP",sans-serif';g.fillText(st.sym,0,-12);g.font='900 15px "Noto Sans JP",sans-serif';g.fillText(st.label,0,12);g.restore();}
+      g.save();g.translate(ex,ey);g.scale(sc,sc);g.globalAlpha=e.g==='good'||e.g==='miss'?1-p*0.6:1-p*0.8;g.fillStyle=st.color;g.font='900 26px "Noto Sans JP",sans-serif';g.fillText(st.sym,0,-12);g.font='900 15px "Noto Sans JP",sans-serif';g.fillText(st.label,0,12);if(e.why){g.font='700 12px "Noto Sans JP",sans-serif';g.fillText(e.why,0,30);}g.restore();}
     g.globalAlpha=1;
     // コンボの強調（200ms）
     if(now-this.comboFlash<200&&this.combo>0){const p=(now-this.comboFlash)/200;g.save();g.translate(W/2,top+laneH*1.2);if(!this.calm)g.scale(1+0.15*(1-p),1+0.15*(1-p));g.fillStyle='#FFB020';g.font='900 30px "Noto Sans JP",sans-serif';g.fillText(this.combo+' コンボ',0,0);g.restore();}
     // カウントイン
-    if((this.state==='playing'||this.state==='paused')&&vis<this.countFrom&&vis>this.countFrom-barMs){const k=4-Math.floor((vis-(this.countFrom-barMs))/beatMs);if(k>=1&&k<=4){g.fillStyle='rgba(242,242,245,.9)';g.font='900 72px "Noto Sans JP",sans-serif';g.fillText(String(k),W/2,(top+bottom)/2);}}
+    if((this.state==='playing'||this.state==='paused')&&vis<this.countFrom&&vis>this.countFrom-barMs){const k=(this.chart.meter||4)-Math.floor((vis-(this.countFrom-barMs))/beatMs);if(k>=1&&k<=(this.chart.meter||4)){g.fillStyle='rgba(242,242,245,.9)';g.font='900 72px "Noto Sans JP",sans-serif';g.fillText(String(k),W/2,(top+bottom)/2);}}
     // 進行バー
     const prog=clamp(vis/this.chart.endMs,0,1);g.fillStyle='rgba(242,242,245,.12)';g.fillRect(0,H-4,W,4);g.fillStyle='#FFB020';g.fillRect(L?W*(1-prog):0,H-4,W*prog,4);
+    // 名曲ステージのクレジット
+    if(this.meta.mode==='pd'&&PD_BY_KEY[this.meta.pdKey]){g.save();g.fillStyle='rgba(242,242,245,.45)';g.font='12px "Noto Sans JP",sans-serif';g.textAlign=L?'left':'right';g.textBaseline='alphabetic';g.fillText(pdCredit(PD_BY_KEY[this.meta.pdKey]),L?12:W-12,H-12);g.restore();}
     // 次のコード表示
     const ni=this.nextInfo(vis);const key=ni?ni.key:'';if(key!==this.lastNext){this.lastNext=key;const el=$('#hNext');
       if(!ni)el.innerHTML='';else if(ni.chord)el.innerHTML=`<div class="lab">次<br>${esc(ni.sub||'')}</div><div class="cn">${esc(ni.chord)}</div>${chordSVG(ni.chord,56,this.lefty,true)}`;
       else el.innerHTML=`<div class="lab">次</div><div class="cn">${esc(ni.txt)}</div><div class="lab" style="text-align:left">${esc(ni.sub)}</div>`;}
   }
 };
+/* MISSの理由。マイク判定では「音が違う」「早すぎ・遅すぎ」「聞こえない」を区別する */
+function missWhy(n,input){if(n.wrong)return n.type==='single'&&(!n.heard||n.heard==='?')?'高さ不明':'音が違う';if(n.offMiss!=null)return n.offMiss<0?'早すぎ':'遅すぎ';return input==='mic'?'聞こえない':'';}
 function rr(g,x,y,w,h,r){r=Math.min(r,w/2,h/2);g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 cv.addEventListener('pointerdown',e=>{if(Play.state==='playing'||Play.state==='waiting'){if(Play.state==='waiting'&&Play.input==='mic')return;Play.onTap(e);}});
 window.addEventListener('keydown',e=>{if(!$('#play').classList.contains('on'))return;
@@ -1030,6 +1194,7 @@ function applyResult(pl){
   const sec=Math.round(pl.playMs/1000);const before=levelInfo();const xp=[];
   const playXP=Math.round(sec/60*cfg.xp.per_minute);if(playXP>0){addXP(playXP,'play');xp.push({label:sec<60?`練習 ${sec}秒`:`練習 ${Math.floor(sec/60)}分${sec%60?sec%60+'秒':''}`,xp:playXP});}
   const res={meta,acc,stars,score:Math.round(pl.score),counts:{...pl.counts},avg,offsets:hits.slice(),maxCombo:pl.maxCombo,wrong:pl.wrong,sec,speed:ch.speed,xp,weakBars:[],msgs:[]};
+  res.input=pl.input;res.missWhy={};for(const n of ch.notes){if(n.judged!=='miss')continue;const w=missWhy(n,pl.input)||'その他';const k=n.type==='single'?n.string+'弦':n.type==='chord'?'コード':'ミュート';const o=res.missWhy[w]||(res.missWhy[w]={n:0,by:{}});o.n++;o.by[k]=(o.by[k]||0)+1;}
   // 小節ごとの正確さ
   const byBar={};for(const n of ch.notes){const b=byBar[n.bar]||(byBar[n.bar]={sum:0,n:0});b.sum+=cfg.score[n.judged||'miss'];b.n++;}
   res.bars=Object.entries(byBar).map(([b,v])=>({bar:+b,acc:v.sum/(100*v.n)*100}));
@@ -1040,6 +1205,15 @@ function applyResult(pl){
     for(const b of res.bars)if(b.acc<cfg.weak.register_below){const r=registerWeak(id,b.bar,ch.speed);if(r!=='full')res.weakBars.push(b.bar);else res.weakFull=true;}
     const m=updateSpeed(id,acc,ch.speed);if(m)res.msgs.push(m);
     const st=STAGES[id];res.unlockedNext=stars>=1&&prev<1&&st.no<12;res.worldUnlocked=st.boss&&stars>=cfg.unlock.boss_stars_to_next_world&&prev<cfg.unlock.boss_stars_to_next_world&&st.world<WORLDS.length;
+  }else if(meta.mode==='pd'){
+    const id=meta.stageId,song=PD_BY_KEY[meta.pdKey];
+    if(meta.section)res.msgs.push(`区間練習のため、★と自己ベストは記録されません。曲全体を弾くと記録されます`);
+    else{const prev=P.stars[id]||0;res.prevStars=prev;res.prevBest=P.best[id]||0;
+      if(stars>prev){for(let k=prev+1;k<=stars;k++){const b=cfg.xp.first_star_bonus[k-1];addXP(b,'star');xp.push({label:`はじめての★${k}`,xp:b});}P.stars[id]=stars;}
+      if(res.score>(P.best[id]||0))P.best[id]=res.score;
+      for(const b of res.bars)if(b.acc<cfg.weak.register_below){const r=registerWeak(id,b.bar,ch.speed);if(r!=='full')res.weakBars.push(b.bar);else res.weakFull=true;}
+      if(meta.version==='easy'&&song&&song.normal&&stars>=1&&prev<1){res.pdNormal=song.normal.id;res.msgs.push('「ふつう」が解放されました');}}
+    const m=updateSpeed(id,acc,ch.speed);if(m)res.msgs.push(m);
   }else if(meta.mode==='weak'){
     const card=P.weak.find(w=>w.id===meta.cardId);
     if(card){const W=cfg.weak;if(weakDue(card)){if(acc>=W.graduate_accuracy){card.passes++;if(card.passes>=W.graduate_passes){P.weak=P.weak.filter(w=>w.id!==card.id);P.weakDone[card.id]=Date.now();addXP(cfg.xp.weak_card_cleared,'weak');xp.push({label:'苦手カード卒業',xp:cfg.xp.weak_card_cleared});res.graduated=true;}
@@ -1056,12 +1230,16 @@ function applyResult(pl){
 }
 
 /* ========== 遅延キャリブレーション（S04） ========== */
-const Calib={phase:'idle',hits:[],clicks:[],result:null,err:null,timer:null,
-  async run(){
-    this.stop();this.err=null;this.result=null;this.hits=[];await A.resume();const s=Settings.get();
-    if(s.input==='mic'){const ok=await Mic.start();if(!ok){this.err=(Mic.error||'マイクを使えません')+'。設定で「タップ」に切り替えると、マイクなしで遊べます。';this.phase='idle';render();return;}
+const Calib={phase:'idle',hits:[],clicks:[],result:null,err:null,timer:null,mode:'human',devs:null,reopened:false,
+  /* 自動で測れるのは、マイク判定でスピーカーか有線イヤホンのとき（有線はイヤホンを外してスピーカーで測る） */
+  canAuto(){const s=Settings.get();return s.input==='mic'&&(s.route==='speaker'||s.route==='wired');},
+  async run(mode){
+    this.stop();this.err=null;this.result=null;this.devs=null;this.hits=[];this.clicks=[];await A.resume();const s=Settings.get();
+    this.mode=mode==='auto'&&this.canAuto()?'auto':'human';
+    if(s.input==='mic'){let ok;if(this.mode==='auto'&&s.route==='speaker'){this.reopened=true;ok=await Mic.reopen(true);}else ok=await Mic.start();
+      if(!ok){this.err=(Mic.error||'マイクを使えません')+'。設定で「タップ」に切り替えると、マイクなしで遊べます。';this.phase='idle';render();return;}
       this.phase='measuring';render();await Mic.measureAmbient(1200);Mic.listeners.add(this._on||(this._on=ev=>{if(this.phase==='running')this.hits.push(ev.time);}));}
-    const C=CONFIG.calib,c=A.ctx,T0=c.currentTime+1.0;this.clicks=[];for(let i=0;i<C.clicks;i++){const t=T0+i*C.interval_ms/1000;this.clicks.push(t);A.click(t,false);}
+    const C=CONFIG.calib,c=A.ctx,T0=c.currentTime+1.0,nc=this.mode==='auto'?C.auto_clicks:C.clicks;this.clicks=[];for(let i=0;i<nc;i++){const t=T0+i*C.interval_ms/1000;this.clicks.push(t);A.click(t,this.mode==='auto');}
     this.phase='running';render();
     this.timer=setInterval(()=>{this.paint();if(c.currentTime>this.clicks[this.clicks.length-1]+0.6){this.finish();}},50);
   },
@@ -1070,13 +1248,22 @@ const Calib={phase:'idle',hits:[],clicks:[],result:null,err:null,timer:null,
   match(t){let best=null,bd=1e9;for(const h of this.hits){const d=h-t;if(d>-0.2&&d<0.45&&Math.abs(d-0.05)<bd){bd=Math.abs(d-0.05);best=d;}}return best;},
   finish(){
     clearInterval(this.timer);if(this._on)Mic.listeners.delete(this._on);
-    const diffs=this.clicks.map(t=>this.match(t)).filter(d=>d!=null).map(d=>d*1000);
-    if(diffs.length<this.clicks.length){this.phase='idle';this.err=`${this.clicks.length}回のうち${diffs.length}回しか${Settings.get().input==='mic'?'音を検出':'タップを記録'}できませんでした。もう一度クリックに合わせて${Settings.get().input==='mic'?'開放6弦を弾いて':'タップして'}ください。`;render();return;}
-    const s=diffs.sort((a,b)=>a-b).slice(1,-1);const med=(s[2]+s[3])/2;const mean=s.reduce((a,b)=>a+b,0)/s.length;const std=Math.sqrt(s.reduce((a,b)=>a+(b-mean)**2,0)/s.length);
-    this.result={offset:Math.round(med),std:Math.round(std*10)/10,at:Date.now()};this.phase='done';render();
+    if(this.reopened){this.reopened=false;Mic.reopen(false);}
+    const C=CONFIG.calib,auto=this.mode==='auto',mic=Settings.get().input==='mic';
+    const raw=this.clicks.map(t=>{const d=this.match(t);return d==null?null:d*1000;}),got=raw.filter(d=>d!=null);
+    const failMsg=k=>auto?`クリック音を${this.clicks.length}回のうち${k}回しか聞き取れませんでした。有線イヤホンを外し、端末の音量を上げて、周りを静かにしてから、もう一度測ってください。`
+      :`${this.clicks.length}回のうち${k}回しか${mic?'音を検出':'タップを記録'}できませんでした。もう一度クリックに合わせて${mic?'ミュートした弦を弾いて':'タップして'}ください。`;
+    if(got.length<C.min_hits){this.phase='idle';this.err=failMsg(got.length);render();return;}
+    // ずれの大きい回（中央値から3×MADより外）を除き、残りの中央値を補正値にする
+    const med=a=>{const s=[...a].sort((x,y)=>x-y),n=s.length;return n%2?s[n>>1]:(s[n/2-1]+s[n/2])/2;};
+    const m0=med(got),lim=Math.max(10,3*1.4826*med(got.map(d=>Math.abs(d-m0)))),keep=got.filter(d=>Math.abs(d-m0)<=lim);
+    if(keep.length<C.min_hits){this.phase='idle';this.err=failMsg(keep.length);render();return;}
+    const off=med(keep),mean=keep.reduce((a,b)=>a+b,0)/keep.length,std=Math.sqrt(keep.reduce((a,b)=>a+(b-mean)**2,0)/keep.length),se=1.2533*std/Math.sqrt(keep.length);
+    this.devs=raw.map(d=>d==null?null:{d:d-off,out:Math.abs(d-m0)>lim});
+    this.result={offset:Math.round(off),std:Math.round(std*10)/10,se:Math.round(se*10)/10,n:keep.length,total:this.clicks.length,method:this.mode,at:Date.now()};this.phase='done';render();
   },
   accept(){if(this.result)saveCalib(this.result);this.phase='idle';},
-  stop(){clearInterval(this.timer);if(this._on)Mic.listeners.delete(this._on);this.phase='idle';}
+  stop(){clearInterval(this.timer);if(this._on)Mic.listeners.delete(this._on);this.phase='idle';if(this.reopened){this.reopened=false;Mic.reopen(false);}}
 };
 /* ========== アイコン・小物 ========== */
 const IP={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',map:'<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>',cards:'<rect x="4" y="7" width="12" height="14" rx="2"/><path d="M8 3h10a2 2 0 0 1 2 2v12"/>',
@@ -1087,6 +1274,7 @@ const IP={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-
   sound:'<path d="M4 9h4l5-4v14l-5-4H4zM17 8a5 5 0 0 1 0 8"/>',stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',flag:'<path d="M5 21V4h11l-2 4 2 4H5"/>',rest:'<path d="M3 13h14a4 4 0 0 1 0 8H3zM17 15h1a2 2 0 0 0 0-4h-1M7 3v4M11 3v4"/>'};
 const ic=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IP[n]}</svg>`;
 const ICON=new Proxy({},{get:(_,k)=>ic(k)});
+IP.note='<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>';
 function stringsStripe(w=96){return `<span class="strings" style="width:${w}px" aria-hidden="true">${[1,2,3,4,5,6].map(s=>`<i style="background:var(--s${s});opacity:${.55+s*.07}"></i>`).join('')}</span>`;}
 function chordSVG(name,size=88,lefty=false){
   const sh=SHAPES[name];if(!sh)return'';const fr=sh.filter(f=>f>0);const maxF=fr.length?Math.max(...fr):1,minF=fr.length?Math.min(...fr):1;const base=maxF<=4?1:minF;
@@ -1113,12 +1301,12 @@ let route={name:'home'};const OB={};
 function go(name,params={}){Guide.stop();if(route.name==='tools'&&name!=='tools'){Metro.stop();Tuner.stop();}if(Calib.phase!=='idle'&&name!==route.name)Calib.stop();if(LevelCheck.phase!=='idle'&&name!==route.name)LevelCheck.stop();route={name,...params};render();window.scrollTo(0,0);}
 function render(){
   if(!(P.profile&&P.profile.onboarded)&&!/^ob/.test(route.name))route={name:'ob1'};
-  const V={ob1:vOb1,ob2:vOb2,ob3:vOb3,ob4:vOb4,home:vHome,map:vMap,stage:vStage,result:vResult,weak:vWeak,league:vLeague,my:vMy,tools:vTools,settings:vSettings,calib:vCalib,level:()=>vLevel(false),obLevel:()=>vLevel(true)}[route.name]||vHome;
+  const V={ob1:vOb1,ob2:vOb2,ob3:vOb3,ob4:vOb4,home:vHome,map:vMap,stage:vStage,result:vResult,weak:vWeak,league:vLeague,my:vMy,tools:vTools,settings:vSettings,calib:vCalib,pd:vPd,pdlist:vPdList,credits:vCredits,level:()=>vLevel(false),obLevel:()=>vLevel(true)}[route.name]||vHome;
   $('#view').innerHTML=V();
   const showTabs=!/^ob/.test(route.name);$('#tabs').style.display=showTabs?'':'none';
   if(showTabs){const child=P.profile&&P.profile.ageClass==='child';
     const tabs=[['home','ホーム','home'],['map','マップ','map'],['weak','苦手','cards'],child?['tools','ツール','tools']:['league','リーグ','trophy'],['my','マイページ','user']];
-    const cur={stage:'map',result:'map',settings:'my',calib:'my',level:'my'}[route.name]||route.name;
+    const cur={stage:'map',result:'map',settings:'my',calib:'my',level:'my',pd:'map',pdlist:'map',credits:'my'}[route.name]||route.name;
     $('#tabsIn').innerHTML=tabs.map(([k,l,i])=>`<button data-act="go" data-to="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}<span>${l}</span></button>`).join('');}
   if(route.name==='tools')Tuner.bind();
 }
@@ -1144,21 +1332,33 @@ function vOb3(){const pre=Mic.support();if(pre&&!Mic.error)Mic.fail(pre);const b
   <div class="grow"></div><div class="stack">${blocked?'':`<button class="btn primary block" data-act="obMic">${ICON.mic}マイクを許可する</button>`}<button class="btn ${blocked?'primary':''} block" data-act="obTap">マイクなしで始める（画面タップで判定）</button><button class="btn ghost block" data-act="go" data-to="ob2">戻る</button></div></div>`;}
 function vOb4(){return `<div class="ob">${steps(4)}<h1>遅延を合わせます</h1><p class="sub">端末や出力経路によって、音が聞こえるまでの時間が違います。最初に一度だけ測ってください。</p>${calibBlock()}
   <div class="grow"></div><div class="stack">${Calib.phase==='done'?'':''}<button class="btn ghost block" data-act="obFinish">あとで測る（推定値で始める）</button></div></div>`;}
+/* 1回ごとのずれ（中央値との差）。上が遅い、下が早い */
+function devStrip(devs){
+  if(!devs||!devs.length)return'';const W=320,H=76,cy=38,n=devs.length,x=i=>22+i*(W-34)/Math.max(1,n-1),y=d=>cy-clamp(d,-60,60)/60*28;
+  const dots=devs.map((v,i)=>v==null?`<circle cx="${x(i)}" cy="${cy}" r="4" fill="none" stroke="var(--sub)" stroke-width="1.5"/>`:`<circle cx="${x(i)}" cy="${y(v.d)}" r="4.5" fill="${v.out?'var(--miss)':'var(--accent)'}"/>`).join('');
+  return `<figure style="margin:8px 0 0"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="1回ごとのずれ"><rect x="16" y="${y(15)}" width="${W-22}" height="${y(-15)-y(15)}" fill="var(--great)" opacity=".18"/><line x1="16" x2="${W-6}" y1="${cy}" y2="${cy}" stroke="var(--line)" stroke-width="1.5"/>
+    <text x="0" y="12" font-size="10" fill="var(--sub)">遅い</text><text x="0" y="${H-4}" font-size="10" fill="var(--sub)">早い</text>${dots}</svg>
+    <figcaption class="small sub">1回ごとのずれ。緑の帯は±15ms、灰色は除いた回、白抜きは聞き取れなかった回です。</figcaption></figure>`;
+}
 function calibBlock(){
   const s=Settings.get(),mic=s.input==='mic',cur=LS.get('fq.calib',{})[calibKey()],R=Calib.result;
-  const dots=[...Array(CONFIG.calib.clicks)].map((_,i)=>{if(Calib.phase!=='done'||!Calib.clicks[i])return'<i></i>';return `<i class="tick ${Calib.match(Calib.clicks[i])!=null?'hit':''}"></i>`;}).join('');
+  const nDots=Calib.phase==='idle'&&!R?CONFIG.calib.clicks:Calib.mode==='auto'?CONFIG.calib.auto_clicks:CONFIG.calib.clicks,canAuto=Calib.canAuto();
+  const dots=[...Array(nDots)].map((_,i)=>{if(Calib.phase!=='done'||!Calib.clicks[i])return'<i></i>';return `<i class="tick ${Calib.match(Calib.clicks[i])!=null?'hit':''}"></i>`;}).join('');
   let body='';
-  if(Calib.phase==='idle')body=`${Calib.err?`<div class="banner" style="margin-bottom:12px"><div>${esc(Calib.err)}</div></div>`:''}<button class="btn primary block" data-act="calibRun">${ICON.play}はじめる</button>`;
+  if(Calib.phase==='idle')body=`${Calib.err?`<div class="banner" style="margin-bottom:12px"><div>${esc(Calib.err)}</div></div>`:''}${canAuto?`<button class="btn primary block" data-act="calibRun" data-mode="auto">${ICON.sound}自動で測る（おすすめ）</button>
+    <p class="small sub" style="margin:8px 0 12px">スピーカーから鳴らしたクリック音をマイクで聞き取って測ります。${s.route==='wired'?'有線イヤホンは外してから押してください。':''}測っている間は音を立てないでください。</p>
+    <button class="btn block" data-act="calibRun" data-mode="human">${ICON.play}弾いて測る</button>`:`<button class="btn primary block" data-act="calibRun" data-mode="human">${ICON.play}はじめる</button>`}`;
   if(Calib.phase==='measuring')body=`<p class="sub" style="text-align:center">まわりの音を測っています。弾かずに待ってください。</p>`;
-  if(Calib.phase==='running')body=`<p style="text-align:center;font-weight:700">${mic?'クリックに合わせて開放6弦を弾いてください':'クリックに合わせて下の枠をタップしてください'}</p>`;
-  if(Calib.phase==='done'){const bad=R.std>CONFIG.calib.max_std_ms;body=`<div class="kv"><span>補正値</span><b class="num">${R.offset} ms</b></div><div class="kv"><span>ばらつき</span><b class="num">${R.std} ms</b></div>
-    ${bad?`<div class="banner" style="margin:8px 0"><div><b>ばらつきが${CONFIG.calib.max_std_ms}msを超えています</b>判定がずれやすくなります。もう一度測ってください。</div></div>`:''}
-    <div class="stack" style="margin-top:8px"><button class="btn ${bad?'':'primary'} block" data-act="calibAccept">この値を使う</button><button class="btn ${bad?'primary':''} block" data-act="calibRun">もう一度測る</button></div>`;}
+  if(Calib.phase==='running')body=`<p style="text-align:center;font-weight:700">${Calib.mode==='auto'?'クリック音を聞き取っています。音を立てずに待ってください':mic?'左手で弦に軽く触れてミュートし、クリックに合わせてジャッと短く鳴らしてください':'クリックに合わせて下の枠をタップしてください'}</p>`;
+  if(Calib.phase==='done'){const bad=R.se>CONFIG.calib.max_se_ms;body=`<div class="kv"><span>補正値</span><b class="num">${R.offset} ms</b></div><div class="kv"><span>補正値の確かさ</span><b class="num">±${R.se} ms</b></div><div class="kv"><span>使った回数</span><b class="num">${R.n}/${R.total}回</b></div>
+    ${devStrip(Calib.devs)}
+    ${bad?`<div class="banner" style="margin:8px 0"><div><b>1回ごとのずれが大きめです</b>補正値が±${R.se}msほどずれている可能性があります。もう一度測るか、このまま使ってください。</div></div>`:''}
+    <div class="stack" style="margin-top:8px"><button class="btn ${bad?'':'primary'} block" data-act="calibAccept">この値を使う</button><button class="btn ${bad?'primary':''} block" data-act="calibRun" data-mode="${Calib.mode}">もう一度測る</button></div>`;}
   return `<div class="card"><div class="section" style="margin-top:0">音を聞く方法</div>${chipSet('route',Object.entries(ROUTES),s.route,'setRoute')}
-    <p class="sub small" style="margin-top:12px">${CONFIG.calib.interval_ms}ms間隔のクリックが${CONFIG.calib.clicks}回鳴ります。最大と最小を除いた6回の中央値を補正値にします。</p>
-    <div class="calib-dots" aria-hidden="true">${dots}</div>
+    <p class="sub small" style="margin-top:12px">${canAuto?`弾いて測る場合は、`:''}${CONFIG.calib.interval_ms}ms間隔のクリックが${CONFIG.calib.clicks}回鳴ります。ずれの大きい回を除いた中央値を補正値にします。</p>
+    <div class="calib-dots ${nDots>10?'many':''}" aria-hidden="true">${dots}</div>
     ${mic?'<div class="level" style="margin-bottom:16px" aria-hidden="true"><i id="calLvl"></i></div>':'<div class="tapzone" id="tapzone" style="margin-bottom:16px">ここをタップ</div>'}
-    ${body}<p class="small sub" style="margin:12px 0 0">いまの値（${ROUTES[s.route]}・${mic?'マイク':'タップ'}）：${cur?`${cur.offset}ms（ばらつき${cur.std}ms）`:'未測定'}</p></div>`;
+    ${body}<p class="small sub" style="margin:12px 0 0">いまの値（${ROUTES[s.route]}・${mic?'マイク':'タップ'}）：${cur?`${cur.offset}ms（${cur.se!=null?'確かさ±'+cur.se+'ms':'ばらつき'+cur.std+'ms'}${cur.method==='auto'?'・自動で測定':''}）`:'未測定'}</p></div>`;
 }
 
 /* ---------- S05 ホーム ---------- */
@@ -1190,12 +1390,15 @@ function vMap(){
   const nodes=w.list.map((s,i)=>{const lk=!stageUnlocked(s),stars=P.stars[s.id]||0,cur=ns&&ns.id===s.id;
     return `<button class="node ${s.boss?'boss':''} ${lk?'locked':''} ${cur?'cur':''} ${stars?'done':''} ${s.review?'review':''}" style="left:${pts[i].x}%;top:${pts[i].y}px" data-act="openStage" data-id="${s.id}" aria-label="${esc(stageTitle(s))}${lk?'（ロック中）':`、★${stars}つ`}">
       <span class="disc">${lk?ICON.lock:s.boss?ICON.crown:s.no}</span><span class="stars">${lk?'':starStr(stars)}</span><span class="lbl">${esc(s.t)}</span></button>`;}).join('');
-  return `<div class="top"><div class="grow"><h1>ワールドマップ</h1></div></div><div class="worldtabs">${tabs}</div>
+  const pdNodes=PD_SONGS.filter(x=>x.world===wn&&pdVisible(x)).map(x=>{const i=w.list.findIndex(y=>y.id===x.requires);if(i<0)return'';const p=pts[i],lk=!pdUnlocked(x),stars=pdStars(x);
+    return `<button class="node pd ${lk?'locked':''} ${stars?'done':''}" style="left:${p.x>50?p.x-34:p.x+34}%;top:${p.y}px" data-act="openPd" data-key="${x.key}" aria-label="名曲「${esc(x.title)}」${lk?'（ロック中）':`、★${stars}つ`}">
+      <span class="disc">${lk?ICON.lock:ICON.note}</span><span class="stars">${lk?'':starStr(stars)}</span><span class="lbl">${esc(x.short)}</span></button>`;}).join('');
+  return `<div class="top"><div class="grow"><h1>ワールドマップ</h1></div><button class="btn" data-act="go" data-to="pdlist">${ICON.note}名曲</button></div><div class="worldtabs">${tabs}</div>
   <div class="wbanner" style="background:linear-gradient(135deg,${w.tint},${w.tint}AA 60%,#12141C)"><div class="lines" aria-hidden="true">${[1,2,3,4,5,6].map(s=>`<i style="background:var(--s${s})"></i>`).join('')}</div>
     <div class="small" style="opacity:.8">ワールド${wn}</div><h1>${esc(w.name)}</h1><p>${esc(w.theme)}・BPM ${w.bpm}</p></div>
   ${unl?'':`<div class="banner" style="margin-top:12px">${ICON.lock}<div><b>まだ解放されていません</b>ワールド${wn-1}のボス戦で★${CONFIG.unlock.boss_stars_to_next_world}つを取ると解放されます。</div></div>`}
-  <div class="path" style="height:${H}px"><svg class="route" viewBox="0 0 100 ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--line)" stroke-width="6" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>${nodes}</div>
-  <p class="small sub">点線の枠は復習ステージです。★${CONFIG.unlock.stars_to_next}つで次のステージが開きます。</p>`;
+  <div class="path" style="height:${H}px"><svg class="route" viewBox="0 0 100 ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--line)" stroke-width="6" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>${nodes}${pdNodes}</div>
+  <p class="small sub">点線の枠は復習ステージ、角の丸い四角は名曲ステージ（寄り道）です。★${CONFIG.unlock.stars_to_next}つで次のステージが開きます。</p>`;
 }
 
 /* ---------- S07 ステージ詳細 ---------- */
@@ -1229,24 +1432,82 @@ function vResult(){
   let next='';if(m.mode==='stage'){const st=STAGES[m.stageId];const w=WORLDS[st.world-1];
     if(!st.boss){const n=w.list[st.no];if(stageUnlocked(n))next=`<button class="btn primary block" data-act="openStage" data-id="${n.id}">次のステージへ</button>`;}
     else if(st.world<WORLDS.length&&worldUnlocked(st.world+1))next=`<button class="btn primary block" data-act="go" data-to="map" data-w="${st.world+1}">ワールド${st.world+1}へ</button>`;}
+  if(m.mode==='pd'&&r.pdNormal)next=`<button class="btn primary block" data-act="pdTry" data-id="${r.pdNormal}">「ふつう」に挑戦する</button>`;
   const weakBars=r.bars.filter(b=>b.acc<C.weak.register_below);
   return `<div class="top"><div class="grow"><div class="small sub">結果</div><h1>${esc(m.title)}</h1></div></div>
   <div class="card" style="text-align:center"><div class="bigstars">${starStr(r.stars)}</div>
     <p style="margin:12px 0 0;font-weight:700">${r.stars?`★${r.stars}つ獲得`:'★まであと少し'}${r.stars<3?`<span class="sub" style="font-weight:400">・次の★まで正確さ あと${toStar.toFixed(1)}%</span>`:''}</p>
-    ${m.mode==='stage'&&r.score>r.prevBest?'<p class="small" style="margin:4px 0 0">自己ベストを更新しました</p>':''}</div>
+    ${(m.mode==='stage'||m.mode==='pd'&&!m.section)&&r.score>r.prevBest?'<p class="small" style="margin:4px 0 0">自己ベストを更新しました</p>':''}</div>
   <div class="grades" style="margin-top:12px">${['perfect','great','good','miss'].map(k=>`<div class="grade"><span class="sym" style="color:var(--${k})" aria-hidden="true">${JUDGE_STYLE[k].sym}</span><b class="num">${r.counts[k]}</b><span class="small">${JUDGE_STYLE[k].label}</span></div>`).join('')}</div>
+  ${r.counts.miss&&r.missWhy?`<div class="section">MISSの内訳</div><div class="card">${['聞こえない','高さ不明','音が違う','早すぎ','遅すぎ','その他'].filter(k=>r.missWhy[k]).map(k=>`<div class="kv"><span>${{'聞こえない':'音が聞こえなかった','高さ不明':'音の高さを聞き取れなかった','音が違う':'音の高さが違った','早すぎ':'早すぎた','遅すぎ':'遅すぎた','その他':'弾かなかった'}[k]}<span class="small sub" style="display:block">${Object.entries(r.missWhy[k].by).sort().map(([a,c])=>`${esc(a)} ${c}回`).join('・')}</span></span><b class="num">${r.missWhy[k].n}</b></div>`).join('')}
+    ${r.missWhy['高さ不明']?`<p class="small sub" style="margin:8px 0 0">前に弾いた弦が大きく鳴っていると、次の音が聞き取りにくくなります。弾き終わった弦の響きを手で軽く止めてみてください。</p>`:''}
+    ${r.input==='mic'&&r.missWhy['聞こえない']?`<p class="small sub" style="margin:8px 0 0">細い弦など一部の弦だけ聞こえないときは、音の聞き取りを合わせ直してください。</p><button class="btn block" style="margin-top:8px" data-act="go" data-to="level">${ICON.mic}音の聞き取りを合わせる</button>`:''}</div>`:''}
   <div class="card" style="margin-top:12px"><div class="kv"><span>スコア</span><b class="num">${r.score.toLocaleString()}</b></div><div class="kv"><span>正確さ</span><b class="num">${r.acc.toFixed(1)}%</b></div><div class="kv"><span>最大コンボ</span><b class="num">${r.maxCombo}</b></div><div class="kv"><span>速度</span><b class="num">${r.speed}%</b></div></div>
   <div class="section">タイミングの傾向</div><div class="card"><p style="margin-bottom:8px">${r.offsets.length?esc(tend):'ヒットしたノーツがありません'}${r.offsets.length?`<span class="sub num">（平均 ${r.avg>0?'+':''}${Math.round(r.avg)}ms）</span>`:''}</p>
     <div class="hist" aria-hidden="true">${bins.map((v,i)=>`<i class="${i===4||i===5?'mid':''}" style="height:${v/bmx*100}%"></i>`).join('')}</div><div class="row small sub" style="justify-content:space-between"><span>早い −100ms</span><span>0</span><span>+100ms 遅い</span></div></div>
-  ${m.mode==='stage'?`<div class="section">苦手ポイント</div><div class="card">${weakBars.length?weakBars.map(b=>`<div class="kv"><span>${b.bar}小節目</span><b class="num">${b.acc.toFixed(0)}%</b></div>`).join('')+`<p class="small sub" style="margin:8px 0 0">${r.weakFull?`苦手カードが上限の${C.weak.max_cards}枚のため、一部は登録できませんでした。`:'苦手カードに登録しました。明日から出題します。'}</p>`:'<p style="margin:0">正確さ60%未満の小節はありませんでした。</p>'}
+  ${m.mode==='stage'||m.mode==='pd'&&!m.section?`<div class="section">苦手ポイント</div><div class="card">${weakBars.length?weakBars.map(b=>`<div class="kv"><span>${b.bar}小節目</span><b class="num">${b.acc.toFixed(0)}%</b></div>`).join('')+`<p class="small sub" style="margin:8px 0 0">${r.weakFull?`苦手カードが上限の${C.weak.max_cards}枚のため、一部は登録できませんでした。`:'苦手カードに登録しました。明日から出題します。'}</p>`:'<p style="margin:0">正確さ60%未満の小節はありませんでした。</p>'}
     ${r.wrong?`<p class="small sub" style="margin:8px 0 0">音の高さが違ったノーツが${r.wrong}個ありました。押さえる場所を見本で確かめましょう。</p>`:''}</div>`:''}
   <div class="section">獲得XP</div><div class="card">${r.xp.length?r.xp.map(x=>`<div class="kv"><span>${esc(x.label)}</span><b class="num">+${x.xp}</b></div>`).join(''):'<p style="margin:0" class="sub">今回は獲得XPがありません</p>'}${r.levelUp?`<p style="margin:8px 0 0;font-weight:700">レベル${r.levelUp}になりました</p>`:''}</div>
   ${r.msgs.map(x=>`<div class="banner" style="margin-top:12px"><div>${esc(x)}</div></div>`).join('')}
   ${r.graduated?'<div class="banner" style="margin-top:12px"><div><b>苦手カードを卒業しました</b></div></div>':''}
   ${r.worldUnlocked?`<div class="banner" style="margin-top:12px"><div><b>ワールド${STAGES[m.stageId].world+1}が解放されました</b></div></div>`:''}
   ${needRest()?`<div class="banner" style="margin-top:12px">${ICON.rest}<div><b>今日は${todayMin()}分練習しました</b>そろそろ休憩しましょう。</div></div>`:''}
-  <div class="stack" style="margin-top:20px">${next}<button class="btn block ${next?'':'primary'}" data-act="resRetry">もう一度</button><button class="btn ghost block" data-act="go" data-to="${m.back||'map'}">${m.back==='weak'?'苦手カードに戻る':m.back==='home'?'ホームに戻る':'マップに戻る'}</button></div>
+  <div class="stack" style="margin-top:20px">${next}<button class="btn block ${next?'':'primary'}" data-act="resRetry">もう一度</button><button class="btn ghost block" data-act="go" data-to="${m.back||'map'}">${m.back==='weak'?'苦手カードに戻る':m.back==='home'?'ホームに戻る':m.back==='pdlist'?'名曲の一覧に戻る':'マップに戻る'}</button></div>
   <button class="btn ghost block small" style="margin-top:8px" data-act="report">${ICON.flag}判定がおかしいと感じたら報告する</button>`;
+}
+
+/* ---------- 名曲ステージ：一覧・詳細・クレジット ---------- */
+function pdLockMsg(s){const st=STAGES[s.requires];if(!worldUnlocked(s.world))return `ワールド${s.world}が解放されると挑戦できます。`;return st?`${stageTitle(st)}で★1つを取ると開きます。`:'';}
+function pdPending(s){return pdLedger(s).status!=='採用可';}
+function vPdList(){
+  const wf=route.wf||'all',vis=PD_SONGS.filter(pdVisible),ws=[...new Set(vis.map(s=>s.world))].sort();
+  const list=vis.filter(s=>wf==='all'||String(s.world)===String(wf));
+  const prep=PD_LEDGER.filter(L=>L.status!=='除外'&&!PD_SONGS.some(s=>s.rights===L.id)&&!((CONFIG.pd||{}).disabled_ids||[]).includes(L.id));
+  return `${backBar('map','名曲ステージ')}
+  <p class="sub">著作権の保護期間が終わったクラシック曲や民謡を、FretQuestのオリジナル編曲で弾きます。ワールドの技術ステージで★1つを取ると、その技術を使う曲が開きます。</p>
+  ${vis.some(pdPending)?`<div class="banner" style="margin-top:12px"><div><b>試作版の表示です</b>「権利確認中」の曲は、権利の確認が終わるまで正式版では表示しません。</div></div>`:''}
+  ${ws.length>1?`<div class="worldtabs" style="margin-top:12px"><button class="chip" data-act="pdFilter" data-v="all" aria-pressed="${wf==='all'}">すべて</button>${ws.map(w=>`<button class="chip" data-act="pdFilter" data-v="${w}" aria-pressed="${String(wf)===String(w)}">${w}. ${esc(WORLDS[w-1].name)}</button>`).join('')}</div>`:''}
+  ${list.length?`<div class="stack" style="margin-top:12px">${list.map(s=>{const lk=!pdUnlocked(s),stars=pdStars(s);
+    return `<button class="card pdcard" style="text-align:left;width:100%;cursor:pointer;color:inherit;font:inherit" data-act="openPd" data-key="${s.key}" aria-label="名曲「${esc(s.title)}」${lk?'（ロック中）':`、★${stars}つ`}">
+      <span class="pdicon" aria-hidden="true">${lk?ICON.lock:ICON.note}</span><span class="pdtext"><span class="small sub" style="display:block">ワールド${s.world}・${esc(pdLedger(s).composer||'')}</span>
+      <b style="display:block;margin:2px 0 6px">${esc(s.title)}</b>
+      <span class="row wrap" style="gap:6px"><span class="pill num">${esc(s.time)}</span><span class="pill num">${s.bpm} BPM</span><span class="pill">${s.melody?'メロディ':'伴奏'}${s.normal?'・2段階':''}</span>${pdPending(s)?'<span class="pill">権利確認中</span>':''}</span>
+      <span class="small ${lk?'sub':''}" style="display:block;margin-top:6px">${lk?esc(pdLockMsg(s)):starStr(stars)}</span></span></button>`;}).join('')}</div>`
+  :`<div class="empty">${ICON.note}<h2>表示できる名曲はありません</h2><p class="sub">権利の確認が終わった曲から追加します。</p></div>`}
+  ${prep.length?`<div class="section">編曲を準備中</div><div class="card">${prep.map(L=>`<div class="kv"><span>${esc(L.title)}</span><span class="small sub">${esc(L.composer)}</span></div>`).join('')}</div>`:''}
+  <button class="btn ghost block" style="margin-top:16px" data-act="go" data-to="credits">曲のクレジットを見る</button>`;
+}
+function vPd(){
+  const s=PD_BY_KEY[route.key];if(!s||!pdVisible(s))return vPdList();const set=Settings.get(),L=pdLedger(s);
+  if(!pdUnlocked(s))return `${backBar('pdlist','名曲「'+s.title+'」')}<div class="empty">${ICON.lock}<h2>この曲はまだ開いていません</h2><p class="sub">${esc(pdLockMsg(s))}</p><button class="btn primary" data-act="go" data-to="map" data-w="${s.world}">マップを開く</button></div>`;
+  const nu=pdNormalUnlocked(s),ver=route.ver==='normal'&&nu?'normal':'easy',def=ver==='normal'?s.normal:s.easy;
+  const S=route.sec?s.sections.find(x=>x[0]===route.sec):null,sec=S?S[0]:'';
+  const sp=P.speed[def.id]||100,len=Math.round((S?buildSectionChart(def,sp,S[1],S[2]):buildChart(def,sp)).endMs/1000),cal=getCalib();
+  const chords=def.kind==='score'?[]:[...new Set(def.prog)];
+  return `${backBar('pdlist','名曲「'+s.title+'」')}
+  <div class="card"><div class="small sub">${esc(WORLDS[s.world-1].name)}・名曲ステージ${pdPending(s)?'・<b>権利確認中（試作版）</b>':''}</div>
+    <p class="small" style="margin:6px 0 0">${esc(pdCredit(s))}</p>
+    <div class="row wrap" style="margin:8px 0 12px"><span class="pill">身に付く技術：${esc(def.skill)}</span><span class="pill num">${esc(s.time)}</span><span class="pill num">${s.bpm} BPM${s.meter===6?'（8分音符）':''}</span><span class="pill num">約${len}秒</span></div>
+    <div class="row" style="justify-content:space-between"><span>${starStr(P.stars[def.id]||0)}</span><span class="small sub num">自己ベスト ${(P.best[def.id]||0).toLocaleString()}</span></div></div>
+  <p class="sub" style="margin-top:12px">${esc(s.intro)}</p>
+  <div class="section">難しさ</div><div class="chips" role="group"><button class="chip" data-act="pdVer" data-v="easy" aria-pressed="${ver==='easy'}">やさしい</button>${s.normal?`<button class="chip" data-act="pdVer" data-v="normal" aria-pressed="${ver==='normal'}" ${nu?'':'disabled'}>${nu?'ふつう':'ふつう（やさしいで★1）'}</button>`:''}</div>
+  ${chords.length?`<div class="section">使うコード</div><div class="diagrams">${chords.map(c=>`<div class="diagram">${chordSVG(c,80,set.hand==='left')}<span>${esc(c)}</span></div>`).join('')}</div>`:`<p class="sub small" style="margin-top:12px">ノーツの数字は押さえるフレットです。開放弦と${s.world>=5?8:5}フレットまでで弾けるように編曲しています。</p>`}
+  <div class="section">区間練習</div><div class="chips" role="group"><button class="chip" data-act="pdSec" data-v="" aria-pressed="${!sec}">曲全体</button>${s.sections.map(x=>`<button class="chip" data-act="pdSec" data-v="${x[0]}" aria-pressed="${sec===x[0]}">${x[0]}（${x[1]}〜${x[2]}小節）</button>`).join('')}</div>
+  ${sec?`<p class="small sub">区間練習では★と自己ベストは記録されません。</p>`:''}
+  <div class="section">見本</div><button class="btn block" data-act="pdGuide" data-id="${def.id}" data-sec="${sec}">${Guide.on?ICON.stop+'見本を止める':ICON.sound+'見本を聴く（最初の4小節）'}</button>
+  <div class="section">速度</div><div class="speed"><input type="range" id="speed" min="${CONFIG.difficulty.min_speed}" max="100" step="5" value="${sp}" aria-label="速度" oninput="document.getElementById('spv').textContent=this.value+'%'"><b class="num" id="spv" style="min-width:52px;text-align:right">${sp}%</b></div>
+  <p class="small sub" style="margin-top:16px">${set.input==='mic'?'マイク判定':'タップ判定'}・${ROUTES[set.route]}・遅延補正 ${cal.offset}ms${cal.assumed?'（推定値。設定で測れます）':''}</p>
+  <button class="btn primary block" style="margin-top:8px" data-act="playPd" data-id="${def.id}" data-sec="${sec}">${ICON.play}${sec?'区間'+sec+'を練習する':'プレイする'}</button>`;
+}
+function vCredits(){
+  const dis=(CONFIG.pd||{}).disabled_ids||[];
+  const label=L=>{if(L.status==='除外')return'除外';const s=PD_SONGS.find(x=>x.rights===L.id);if(!s)return'編曲を準備中';if(dis.includes(L.id))return'配信停止';return L.status==='採用可'?'配信中':'権利確認中';};
+  const row=L=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(L.title)}</b><span class="small sub" style="display:block">${esc([L.original,`作曲：${L.composer}${L.life?`（${L.life}）`:''}`,L.first].filter(Boolean).join('・'))}</span>${L.status==='除外'&&L.note?`<span class="small sub" style="display:block">理由：${esc(L.note)}</span>`:''}</span><span class="pill" style="flex:none">${label(L)}</span></div>`;
+  return `${backBar('settings','曲のクレジット')}
+  <p class="sub">名曲ステージの曲は、作曲者の没後の保護期間が終わった曲と、作曲者のわからない伝承曲です。譜面と伴奏はFretQuestのオリジナル編曲で、録音や他の人の編曲は使っていません。歌詞は表示しません。</p>
+  ${(CONFIG.pd||{}).show_pending?'<p class="small sub">試作版のため、「権利確認中」の曲も名曲ステージに表示しています。</p>':''}
+  <div class="section">収録する曲</div><div class="card">${PD_LEDGER.filter(L=>L.status!=='除外').map(row).join('')}</div>
+  <div class="section">収録しない曲</div><div class="card">${PD_LEDGER.filter(L=>L.status==='除外').map(row).join('')}</div>`;
 }
 
 /* ---------- S10 苦手カード ---------- */
@@ -1254,7 +1515,7 @@ function vWeak(){
   const W=CONFIG.weak,list=[...P.weak].sort((a,b)=>a.due<b.due?-1:1);
   return `<div class="top"><div class="grow"><h1>苦手カード</h1></div><span class="pill num">${P.weak.length}/${W.max_cards}枚</span></div>
   <p class="sub">正確さ${W.register_below}%未満の小節を記録し、${W.intervals_days.join('日後・')}日後に出題します。出題日に${W.graduate_accuracy}%以上を${W.graduate_passes}回取ると卒業です。</p>
-  ${list.length?`<div class="stack">${list.map(w=>{const st=STAGES[w.stageId];const due=weakDue(w);return `<div class="card"><div class="small sub">${esc(WORLDS[st.world-1].name)}</div><h2 style="margin:2px 0">${esc(st.t)}・${w.bar}小節目</h2>
+  ${list.length?`<div class="stack">${list.map(w=>{const st=STAGES[w.stageId]||PD_VER[w.stageId];const due=weakDue(w);return `<div class="card"><div class="small sub">${esc(WORLDS[st.world-1].name)}</div><h2 style="margin:2px 0">${esc(st.t)}・${w.bar}小節目</h2>
     <div class="row" style="justify-content:space-between;margin:8px 0 12px"><span class="${due?'':'sub'}">${due?'<b>今日出題</b>':'次の出題 '+fmtDay(w.due)}</span><span class="dots" aria-label="合格${w.passes}回">${[...Array(W.graduate_passes)].map((_,i)=>`<i class="${i<w.passes?'on':''}"></i>`).join('')}</span></div>
     <button class="btn ${due?'primary':''} block" data-act="playWeak" data-id="${w.id}">${ICON.play}${due?'練習する':'先に練習する（記録はされません）'}</button></div>`;}).join('')}</div>`
   :`<div class="empty">${ICON.cards}<h2>苦手カードはありません</h2><p class="sub">ステージで正確さ${W.register_below}%未満の小節があると、ここに追加されます。</p><button class="btn primary" data-act="go" data-to="map">マップを開く</button></div>`}`;
@@ -1293,7 +1554,7 @@ function vMy(){
   <div class="section">直近7日の練習（分）</div><div class="card"><div class="week">${days.map(([k,v])=>`<div><span class="small num">${v}</span><i style="height:${v/mx*80}%"></i><span class="small sub">${fmtDay(k).replace(/^\d+\//,'').replace(/（.）/,'')}</span></div>`).join('')}</div></div>
   <div class="section">タイミングの傾向（30日）</div><div class="card"><p style="margin:0">${avg==null?'まだ記録がありません':Math.abs(avg)<10?'おおむね正確なタイミングで弾けています':avg<0?`平均${Math.round(-avg)}ms早めに弾く傾向があります`:`平均${Math.round(avg)}ms遅めに弾く傾向があります`}</p></div>
   <div class="section">バッジ</div><div class="badges">${badges().map(b=>`<div class="badge ${b.on?'':'off'}"><span class="b">${esc(b.b)}</span>${esc(b.t)}</div>`).join('')}</div>
-  ${recent.length?`<div class="section">最近のプレイ</div><div class="card">${recent.map(h=>{const st=STAGES[h.ref];const name=st?stageTitle(st):h.mode==='drill'?(DRILLS[h.ref]?DRILLS[h.ref].t:'ドリル'):'苦手カード';return `<div class="kv"><span>${esc(name)}</span><span class="num">${h.acc}%</span></div>`;}).join('')}</div>`:''}
+  ${recent.length?`<div class="section">最近のプレイ</div><div class="card">${recent.map(h=>{const st=STAGES[h.ref];const name=st?stageTitle(st):h.mode==='pd'?(PD_VER[h.ref]?`名曲「${PD_VER[h.ref].t}」`:'名曲'):h.mode==='drill'?(DRILLS[h.ref]?DRILLS[h.ref].t:'ドリル'):'苦手カード';return `<div class="kv"><span>${esc(name)}</span><span class="num">${h.acc}%</span></div>`;}).join('')}</div>`:''}
   ${age==='child'||age==='teen'?`<div class="section">保護者と共有</div><div class="card"><p class="sub">練習の記録を文章にして、保護者の方に送れます。</p><button class="btn block" data-act="share">${ICON.user}記録の文章を作る</button></div>`:''}`;
 }
 
@@ -1341,7 +1602,7 @@ function vSettings(){
   return `${backBar('my','設定')}
   <div class="section">判定</div><div class="card">
     ${sel('route','音を聞く方法',Object.entries(ROUTES))}${sel('input','判定のしかた',[['mic','マイクで音を聞き取る'],['tap','画面をタップする']])}
-    <div class="set"><div><div>遅延キャリブレーション</div><div class="small sub num">${c.assumed?'未測定（推定 '+c.offset+'ms）':c.offset+'ms・ばらつき'+c.std+'ms'}</div></div><button class="btn" data-act="go" data-to="calib">測り直す</button></div>
+    <div class="set"><div><div>遅延キャリブレーション</div><div class="small sub num">${c.assumed?'未測定（推定 '+c.offset+'ms）':c.offset+'ms・'+(c.se!=null?'確かさ±'+c.se+'ms':'ばらつき'+c.std+'ms')}</div></div><button class="btn" data-act="go" data-to="calib">測り直す</button></div>
     ${sel('pickup','ギターの音',[['amp','アンプやオーディオIFから鳴らす'],['unplugged','アンプなし（生音）']])}
     <div class="set"><div><div>音の聞き取り</div><div class="small sub">${s.levelAt?(s.pickup==='unplugged'?`アンプなし・入力+${s.inGain}dB`:'アンプあり')+`・周りの音との差 ${s.levelSnr}dB`:'未測定'}</div></div><button class="btn" data-act="go" data-to="level">合わせる</button></div>
     ${s.pickup==='unplugged'?sel('inGain','入力の増幅',[...Array(13)].map((_,i)=>[i*3,i?`+${i*3}dB`:'なし'])):''}
@@ -1352,39 +1613,45 @@ function vSettings(){
     ${sel('theme','テーマ',[['system','端末に合わせる'],['dark','ダーク'],['light','ライト']])}${sel('hand','ピックを持つ手',[['right','右手'],['left','左手（弦とボタンの並びを反転）']])}
     ${sel('fs','文字の大きさ',[[1,'標準'],[1.15,'大きい'],[1.3,'とても大きい（130%）']])}${sw('calm','演出を減らす','判定の拡大や揺れをなくし、形と色だけで示します')}</div>
   <div class="section">練習</div><div class="card">${sw('light','軽いモード','デイリークエストを単音と開放弦のドリルにします（明日から反映）')}</div>
+  <div class="section">名曲</div><div class="card"><div class="set"><div><div>曲のクレジット</div><div class="small sub">作曲者と権利の確認状況</div></div><button class="btn" data-act="go" data-to="credits">見る</button></div></div>
   <div class="section">プロフィール</div><div class="card"><div class="set"><span>年齢区分</span><span class="sub">${{child:'13歳未満',teen:'13〜17歳',adult:'18歳以上'}[pr.ageClass]||'未設定'}</span></div>
     <div class="set"><span>進捗の保存先</span><span class="sub">${Sync.status==='synced'?'アカウント':'この端末'}</span></div>
     <div class="set"><div><div>進捗を消す</div><div class="small sub">★、XP、苦手カードがすべて消えます</div></div><button class="btn" data-act="resetAsk">消す</button></div></div>`;
 }
 /* ========== ギターの音の聞き取りチェック ========== */
-const LevelCheck={phase:'idle',err:null,result:null,amb:[],segs:[],cur:null,floor:null,ambient:-90,t0:0,raf:0,db:-100,test:{n:0,note:''},_on:null,
+const LevelCheck={phase:'idle',err:null,result:null,amb:[],segs:[],cur:null,floor:null,ambient:-90,t0:0,raf:0,db:-100,test:{n:0,note:''},_on:null,str:6,seg6:[],
   async run(){
     this.stop();this.err=null;this.result=null;
     const ok=await Mic.start();if(!ok){this.err=[Mic.error,Mic.hint].filter(Boolean).join('。');render();return;}
     Mic.wire(Mic._src,Mic.node,{mode:'unplugged',gain:0});
-    this.amb=[];this.segs=[];this.cur=null;this.floor=null;this.phase='ambient';this.t0=performance.now();
+    this.amb=[];this.segs=[];this.seg6=[];this.str=6;this.cur=null;this.floor=null;this.eh=[];this.lastPk=0;this.phase='ambient';this.t0=performance.now();
     Mic.tap=db=>this.onHop(db);this.paint();render();
   },
   onHop(db){
     this.db=db;const now=performance.now();
+    // 雑音の細かな揺れを弾いた音と数えないよう、約20ms（8ホップ）の平均の大きさで判定する
+    const eh=this.eh||(this.eh=[]);eh.push(10**(db/10));if(eh.length>8)eh.shift();db=10*Math.log10(eh.reduce((a,b)=>a+b,0)/eh.length+1e-12);
     if(this.phase==='ambient'){this.amb.push(db);
       if(now-this.t0>1500){const a=[...this.amb].sort((x,y)=>x-y);this.ambient=a[Math.floor(a.length/2)];this.phase='pluck';this.t0=now;this.floor=db;render();}}
     else if(this.phase==='pluck'){
       if(this.cur){this.cur.peak=Math.max(this.cur.peak,db);if(now-this.cur.t>150){this.segs.push(this.cur.peak);this.cur=null;this.floor=db;render();}}
-      else{this.floor=Math.min(this.floor,db);if(db>this.ambient+6&&db>this.floor+6)this.cur={t:now,peak:db};}
-      if(this.segs.length>=4||now-this.t0>10000)this.finish();}
+      else{this.floor=Math.min(this.floor,db);if(db>this.ambient+6&&db>this.floor+6&&now-(this.lastPk||0)>250){this.cur={t:now,peak:db};this.lastPk=now;}}
+      if(this.segs.length>=3||now-this.t0>8000){if(this.str===6){this.seg6=this.segs;this.segs=[];this.str=1;this.cur=null;this.t0=now;this.floor=db;render();}else this.finish();}}
     else if(this.phase==='test'||this.phase==='testWait'){}
   },
   finish(){
     Mic.tap=db=>{this.db=db;};
-    const pk=[...this.segs].sort((a,b)=>a-b),pluck=pk.length?pk[Math.floor(pk.length/2)]:null,amb=this.ambient;
-    const res={ambient:amb,pluck,count:pk.length,snr:pluck==null?null:pluck-amb};
-    res.grade=pluck==null||res.snr<6?'none':res.snr<12?'low':res.snr<20?'ok':'good';
+    const md=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+    const pluck=md(this.seg6),pluck1=md(this.segs),amb=this.ambient;
+    const res={ambient:amb,pluck,pluck1,count:this.seg6.length,count1:this.segs.length,snr:pluck==null?null:pluck-amb,snr1:pluck1==null?null:pluck1-amb};
+    // 一番小さい弦（1弦）で評価する。1弦が聞き取れなければ「thin」
+    const weak=res.snr1==null?null:Math.min(res.snr,res.snr1);
+    res.grade=pluck==null||res.snr<6?'none':weak==null||weak<6?'thin':weak<12?'low':weak<20?'ok':'good';
     if(pluck!=null){
       if(pluck>=-50){res.mode='amp';Settings.set('pickup','amp');}
-      else{res.mode='unplugged';res.gain=clamp(Math.round(Math.min(-24-pluck,-30-amb)/3)*3,0,36);res.gate=clamp(Math.round(res.snr*0.5/3)*3,6,18);
+      else{res.mode='unplugged';res.gain=clamp(Math.round(Math.min(-24-pluck,-30-amb)/3)*3,0,36);res.gate=clamp(Math.round((weak==null?0:weak)*0.5/3)*3,6,18);
         Settings.set('inGain',res.gain);Settings.set('gateU',res.gate);Settings.set('pickup','unplugged');}
-      Settings.set('levelAt',Date.now());Settings.set('levelSnr',Math.round(res.snr));}
+      Settings.set('levelAt',Date.now());Settings.set('levelSnr',Math.round(weak==null?res.snr:weak));}
     else Mic.setInput();
     this.result=res;this.phase='done';render();
   },
@@ -1427,16 +1694,18 @@ function vLevel(ob){
   let body='';
   if(ph==='idle'&&!R)body=`${L.err?`<div class="banner" style="margin-bottom:12px"><div>${esc(L.err)}</div></div>`:''}<button class="btn primary block" data-act="levelRun">${ICON.mic}測定をはじめる</button>`;
   if(ph==='ambient')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">弾かずに、そのまま待ってください</p><p class="small sub" style="text-align:center;margin:0">周りの音を測っています</p>`;
-  if(ph==='pluck')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">開放6弦を、いつもの強さで4回弾いてください</p><p class="small sub" style="text-align:center;margin:0">音が少し小さくなってから次を弾きます</p>
-    <div class="calib-dots" style="margin:12px 0 0">${[0,1,2,3].map(i=>`<i class="${i<L.segs.length?'hit':''}"></i>`).join('')}</div>`;
+  if(ph==='pluck')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">${L.str===6?'開放6弦を、いつもの強さで3回弾いてください':'6弦の響きを手で止めてから、開放1弦を3回弾いてください'}</p><p class="small sub" style="text-align:center;margin:0">${L.str===6?'音が少し小さくなってから次を弾きます（このあと1弦も測ります）':'細い弦は音が小さいので、検出の基準は1弦に合わせます'}</p>
+    <div class="calib-dots" style="margin:12px 0 0">${[0,1,2].map(i=>`<i class="${(L.str===1?i<L.seg6.length:i<L.segs.length)?'hit':''}"></i>`).join('')}${[0,1,2].map(i=>`<i class="${L.str===1&&i<L.segs.length?'hit':''}"></i>`).join('')}</div>`;
   if((ph==='done'||ph==='idle')&&R){
     const G={good:['よく聞き取れています','このまま練習できます。'],ok:['聞き取れています','判定が安定しないときは、スマホをもう少しギターに近づけてください。'],
       low:['音が小さめです','スマホをギターに近づけるか、少し強めに弾いてください。静かな場所に移ると改善します。'],
-      none:['ギターの音を聞き取れませんでした','スマホをギターから20〜30cm以内に置き、マイクを弦に向けて、もう一度測ってください。']}[R.grade];
+      none:['ギターの音を聞き取れませんでした','スマホをギターから20〜30cm以内に置き、マイクを弦に向けて、もう一度測ってください。'],
+      thin:['1弦の音を聞き取れませんでした','細い弦は音が小さいため、スマホを弦に近づけて、少し強めに弾いてください。検出の基準は一番小さい値にしました。']}[R.grade];
     const f=v=>v==null?'–':`${Math.round(v)} dBFS`;
     body=`<div class="banner" style="margin-top:12px"><div><b>${G[0]}</b>${G[1]}</div></div>
-      <div class="kv"><span>周りの音</span><b class="num">${f(R.ambient)}</b></div><div class="kv"><span>ギターの音</span><b class="num">${f(R.pluck)}</b></div><div class="kv"><span>差</span><b class="num">${R.snr==null?'–':Math.round(R.snr)+' dB'}</b></div>
-      ${R.mode?`<p class="small sub" style="margin:8px 0 0">${R.mode==='unplugged'?`アンプなしの設定にしました（入力を+${R.gain}dB増幅、ギターの音域だけを聞き取り、検出の基準は+${R.gate}dB）。`:'十分な大きさのため、アンプありの設定のままにしました。'}設定画面で変えられます。</p>`:''}
+      <div class="kv"><span>周りの音</span><b class="num">${f(R.ambient)}</b></div><div class="kv"><span>6弦の音</span><b class="num">${f(R.pluck)}</b></div><div class="kv"><span>1弦の音</span><b class="num">${f(R.pluck1)}</b></div>
+      <div class="kv"><span>周りの音との差（小さい方）</span><b class="num">${R.snr==null?'–':Math.round(R.snr1==null?R.snr:Math.min(R.snr,R.snr1))+' dB'}</b></div>
+      ${R.mode?`<p class="small sub" style="margin:8px 0 0">${R.mode==='unplugged'?`アンプなしの設定にしました（入力を+${R.gain}dB増幅、ギターの音域だけを聞き取り、検出の基準は音の小さい1弦に合わせて+${R.gate}dB）。`:`十分な大きさのため、アンプありの設定のままにしました。${R.snr1!=null&&R.snr1*0.5<s.gate?'1弦が聞こえにくいときは「発音を検出する大きさ」を下げてください。':''}`}設定画面で変えられます。</p>`:''}
       <div class="stack" style="margin-top:12px">${R.mode?`<button class="btn ${ob?'':'primary'} block" data-act="levelTest">試し弾きする</button>`:''}<button class="btn block" data-act="levelRun">もう一度測る</button></div>`;}
   if(ph==='testWait')body=`<p style="text-align:center;font-weight:700;margin:12px 0 0">弾かずに、そのまま待ってください</p>`;
   if(ph==='test')body=`<p style="text-align:center;font-weight:700;margin:12px 0 4px">弦を1本ずつ弾いてみてください</p><div class="lnote" id="lvNote" aria-live="polite">${esc(L.test.note)}</div>
@@ -1451,7 +1720,7 @@ function vCalib(){return `${backBar('settings','遅延キャリブレーショ�
 /* ========== 操作 ========== */
 function playStage(id,speed){const st=STAGES[id];const sp=speed||P.speed[id]||100;const meta={mode:'stage',stageId:id,title:stageTitle(st),back:'map',rebuild:()=>buildChart(st,sp)};Play.start(meta.rebuild(),meta);}
 function playDrill(id){const d=DRILLS[id];const bars=Math.ceil(60000/(240000/d.def.bpm));const meta={mode:'drill',drillId:id,title:d.t,back:'home',rebuild:()=>buildChart(d.def,100,{bars})};Play.start(meta.rebuild(),meta);}
-function playWeak(id){const w=P.weak.find(x=>x.id===id);if(!w)return;const st=STAGES[w.stageId];const meta={mode:'weak',cardId:id,title:'苦手カード：'+weakLabel(w),back:'weak',rebuild:()=>buildBarChart(st,w.speed||100,w.bar)};Play.start(meta.rebuild(),meta);}
+function playWeak(id){const w=P.weak.find(x=>x.id===id);if(!w)return;const st=STAGES[w.stageId]||PD_VER[w.stageId];const meta={mode:'weak',cardId:id,title:'苦手カード：'+weakLabel(w),back:'weak',rebuild:()=>buildBarChart(st,w.speed||100,w.bar)};Play.start(meta.rebuild(),meta);}
 const ACT={
   go:d=>go(d.to,d.w?{w:+d.w}:{}),
   obSet:d=>{OB[d.k]=d.v;render();},
@@ -1459,7 +1728,7 @@ const ACT={
   obTap:()=>{Settings.set('input','tap');go('ob4');},
   obFinish:()=>finishOnboarding(),
   setRoute:d=>{Settings.set('route',d.v);Calib.result=null;if(Calib.phase==='done')Calib.phase='idle';render();},
-  calibRun:()=>Calib.run(),
+  calibRun:d=>Calib.run(d.mode),
   levelRun:()=>LevelCheck.run(),
   levelTest:()=>LevelCheck.startTest(),
   levelTestEnd:()=>{LevelCheck.stop();render();},
@@ -1471,7 +1740,14 @@ const ACT={
   guide:async d=>{if(Guide.on){Guide.stop();render();return;}const st=STAGES[d.id];const sp=+($('#speed')||{value:100}).value;await Guide.play(buildChart(st,sp),4);render();},
   playStage:d=>playStage(d.id,+($('#speed')||{value:0}).value),
   playWeak:d=>playWeak(d.id),
-  questGo:d=>{const q=ensureQuests().list[+d.i];if(!q)return;if(q.kind==='drill')playDrill(q.ref);else if(q.kind==='weak')playWeak(q.ref);else go('stage',{id:q.ref});},
+  openPd:d=>go('pd',{key:d.key}),
+  pdVer:d=>{route.ver=d.v;route.sec='';render();},
+  pdSec:d=>{route.sec=d.v;render();},
+  pdFilter:d=>{route.wf=d.v;render();},
+  pdTry:d=>{const def=PD_VER[d.id];if(def)go('pd',{key:def.pdKey,ver:def.version});},
+  pdGuide:async d=>{if(Guide.on){Guide.stop();render();return;}const def=PD_VER[d.id];if(!def)return;const sp=+($('#speed')||{value:100}).value;const S=d.sec?PD_BY_KEY[def.pdKey].sections.find(x=>x[0]===d.sec):null;await Guide.play(S?buildSectionChart(def,sp,S[1],S[2]):buildChart(def,sp),4);render();},
+  playPd:d=>playPd(d.id,d.sec||null,+($('#speed')||{value:0}).value),
+  questGo:d=>{const q=ensureQuests().list[+d.i];if(!q)return;if(q.kind==='drill')playDrill(q.ref);else if(q.kind==='weak')playWeak(q.ref);else if(q.kind==='pd'){if(PD_VER[q.ref])go('pd',{key:PD_VER[q.ref].pdKey});}else go('stage',{id:q.ref});},
   pBegin:()=>Play.begin(),pQuit:()=>Play.quit(),pResume:()=>Play.resume(),pRetry:()=>Play.retry(),
   resRetry:()=>{const m=route.res.meta;Play.start(m.rebuild(),m);},
   report:()=>modal(`<h2>判定についての報告</h2><p class="sub small">どのように感じたか選んでください。音声は送りません。</p>${chipSet('reason',[['missed','弾いたのにMISSになった'],['ghost','弾いていないのに判定された'],['timing','タイミングがずれている'],['other','その他']],null,'repPick')}
